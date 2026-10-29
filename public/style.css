@@ -111,6 +111,17 @@ button { font: inherit; }
     color: var(--muted);
     text-align: center;
     padding: 16px;
+    background: var(--video-bg); /* covers the black frame of a disabled camera */
+}
+/* Mic/camera toggles over the preview, set before joining */
+#previewControls {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 1;
 }
 #joinBox {
     display: flex;

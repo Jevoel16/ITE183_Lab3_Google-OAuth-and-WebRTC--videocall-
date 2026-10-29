@@ -63,6 +63,7 @@ The app runs locally at `http://localhost:8000`.
 - **Session kept on refresh** (per browser tab) until the Google token expires (about 1 hour)
 - **Join is locked** until the user is signed in *and* connected to the server
 - **Multi-person video grid** (mesh WebRTC) with Google names and profile photos when the camera is off
+- **Pre-join mic and camera toggles**: turn the microphone or camera off on the join screen, and the call starts that way
 - **Call controls**: microphone, camera, screen sharing and Leave
 - **Real-time chat** with names, timestamps, unread badge and pop-up notifications
 - **Custom 404 page** and server console logging of HTTP requests and WebSocket events
@@ -190,6 +191,7 @@ HTTP server listening on port 8000 (High Concurrency Thread-Pool Active)
 1. Open <http://localhost:8000>. The join screen shows the camera preview and `Connected to ws://localhost:8000`.
 2. Click **Sign in with Google** and choose your account in the popup.
 3. Your photo, name and email appear in the user chip, and **Join now** becomes active.
+   Optionally use the microphone and camera buttons under the preview to join muted or with the camera off (they turn red, and the preview shows "Camera is off").
 4. Click **Join now**. Your tile shows your Google name with "(You)".
 5. A second participant opens the same URL in another window or browser, signs in (with the same or a different Google account) and joins. Video, audio and chat start straight away.
 6. Use the controls to mute, turn off the camera (your Google photo is shown instead), present your screen, chat, or **Leave**.
@@ -326,6 +328,8 @@ There are no automated tests. Run these manual checks after `bzg run`:
 | 8 | Send chat messages | They appear instantly in the other window |
 | 9 | Stop the server while in a call | "Lost connection to the server" toast; **Join now** disabled |
 | 10 | Open `http://localhost:8000/does-not-exist` | Custom 404 page |
+| 11 | Turn the mic and camera off on the join screen, then join | Buttons turn red and the preview shows "Camera is off"; in the call your tile and the other window show the photo and mic-off badge, with no audio |
+| 12 | Turn them back on in the call | The other window sees video and hears audio |
 
 </details>
 

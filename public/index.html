@@ -17,6 +17,10 @@
         <div id="previewWrap">
             <video id="previewVideo" autoplay playsinline muted></video>
             <div id="previewMsg" class="hidden"></div>
+            <div id="previewControls">
+                <button class="ctrl" id="previewMicBtn" type="button" title="Turn off microphone"></button>
+                <button class="ctrl" id="previewCamBtn" type="button" title="Turn off camera"></button>
+            </div>
         </div>
         <div id="joinBox">
             <h1>Ready to join?</h1>
@@ -255,14 +259,18 @@
             return !!(localStream && localStream.getTracks().some(t => t.kind === kind));
         }
 
+        function renderToggle(btn, on, onIcon, offIcon, what) {
+            btn.innerHTML = on ? onIcon : offIcon;
+            btn.classList.toggle("off", !on);
+            btn.title = (on ? "Turn off " : "Turn on ") + what;
+        }
+
+        // Keeps the join-screen and call-bar buttons in sync
         function updateControlButtons() {
-            const mic = $("micBtn"), cam = $("camBtn");
-            mic.innerHTML = audioOn ? ICONS.micOn : ICONS.micOff;
-            mic.classList.toggle("off", !audioOn);
-            mic.title = audioOn ? "Turn off microphone" : "Turn on microphone";
-            cam.innerHTML = videoOn ? ICONS.camOn : ICONS.camOff;
-            cam.classList.toggle("off", !videoOn);
-            cam.title = videoOn ? "Turn off camera" : "Turn on camera";
+            ["micBtn", "previewMicBtn"].forEach(id =>
+                renderToggle($(id), audioOn, ICONS.micOn, ICONS.micOff, "microphone"));
+            ["camBtn", "previewCamBtn"].forEach(id =>
+                renderToggle($(id), videoOn, ICONS.camOn, ICONS.camOff, "camera"));
             $("shareBtn").classList.toggle("active", !!screenStream);
             $("shareBtn").title = screenStream ? "Stop presenting" : "Present now";
         }
@@ -275,17 +283,21 @@
             if (!hasTrack("audio")) return toast("No microphone available");
             audioOn = !audioOn;
             localStream.getAudioTracks().forEach(t => t.enabled = audioOn);
-            setTileMedia(peers.self.tile, audioOn, videoOn || !!screenStream);
-            updateControlButtons();
-            broadcastMediaState();
+            applyMediaState();
         }
 
         function toggleCam() {
             if (!hasTrack("video")) return toast("No camera available");
             videoOn = !videoOn;
             localStream.getVideoTracks().forEach(t => t.enabled = videoOn);
-            setTileMedia(peers.self.tile, audioOn, videoOn || !!screenStream);
+            applyMediaState();
+        }
+
+        // Before joining there is no self tile or peers, only the preview
+        function applyMediaState() {
             updateControlButtons();
+            if (!inCall) return updatePreviewMsg();
+            setTileMedia(peers.self.tile, audioOn, videoOn || !!screenStream);
             broadcastMediaState();
         }
 
@@ -733,22 +745,28 @@
         // ==============================
         async function initPreview() {
             localStream = await getLocalMedia();
-            const msg = $("previewMsg");
+            if (localStream) $("previewVideo").srcObject = localStream;
+            audioOn = hasTrack("audio");
+            videoOn = hasTrack("video");
+            updatePreviewMsg();
+            updateControlButtons();
+        }
+
+        function updatePreviewMsg() {
+            let text = "";
             if (!localStream) {
-                msg.textContent = window.isSecureContext
+                text = window.isSecureContext
                     ? "Camera and microphone are unavailable. You can still join and chat."
                     : "The browser blocks the camera on plain http:// (except localhost). " +
                       "You can still join, see others and chat.";
-                msg.classList.remove("hidden");
-            } else {
-                $("previewVideo").srcObject = localStream;
-                if (!hasTrack("video")) {
-                    msg.textContent = "Camera is unavailable (microphone only).";
-                    msg.classList.remove("hidden");
-                }
+            } else if (!hasTrack("video")) {
+                text = "Camera is unavailable (microphone only).";
+            } else if (!videoOn) {
+                text = "Camera is off";
             }
-            audioOn = hasTrack("audio");
-            videoOn = hasTrack("video");
+            const msg = $("previewMsg");
+            msg.textContent = text;
+            msg.classList.toggle("hidden", !text);
         }
 
         function joinCall() {
@@ -798,6 +816,8 @@
         $("signOutBtn").addEventListener("click", signOut);
         $("micBtn").addEventListener("click", toggleMic);
         $("camBtn").addEventListener("click", toggleCam);
+        $("previewMicBtn").addEventListener("click", toggleMic);
+        $("previewCamBtn").addEventListener("click", toggleCam);
         $("shareBtn").addEventListener("click", toggleShare);
         $("leaveBtn").addEventListener("click", leaveCall);
         $("chatBtn").addEventListener("click", () => toggleChat());
@@ -812,6 +832,7 @@
         $("shareBtn").innerHTML = ICONS.share;
         $("leaveBtn").innerHTML = ICONS.leave;
         $("chatBtn").innerHTML = ICONS.chat;
+        updateControlButtons();
         updateClock();
         setInterval(updateClock, 15000);
 
