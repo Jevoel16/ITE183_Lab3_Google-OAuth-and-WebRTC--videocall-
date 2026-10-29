@@ -1,0 +1,9 @@
+# Local commit message draft
+commit-msg.txt
+
+# Local Claude settings and personal instructions
+.claude/
+CLAUDE.md
+
+# Local Google OAuth client ID (copy public/config.example.js)
+public/config.js
