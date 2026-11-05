@@ -15,10 +15,10 @@
 ![Google Identity Services](https://img.shields.io/badge/Google_Identity_Services-gsi%2Fclient-4285f4?style=flat)
 ![WebRTC](https://img.shields.io/badge/WebRTC-browser_native-2ea44f?style=flat)
 
-![Version](https://img.shields.io/badge/version-1.1.1-blue?style=flat)
+![Version](https://img.shields.io/badge/version-1.1.2-blue?style=flat)
 ![License](https://img.shields.io/badge/license-Sprucetrap_SAL_1.0-yellow?style=flat)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat)
-[![CI](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml/badge.svg)](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/ci.yml?branch=main&label=CI&style=flat)](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml)
 
 </div>
 
