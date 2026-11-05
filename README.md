@@ -15,8 +15,8 @@
 ![Google Identity Services](https://img.shields.io/badge/Google_Identity_Services-gsi%2Fclient-4285f4?style=flat)
 ![WebRTC](https://img.shields.io/badge/WebRTC-browser_native-2ea44f?style=flat)
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat)
-![License](https://img.shields.io/badge/license-MIT-yellow?style=flat)
+![Version](https://img.shields.io/badge/version-1.0.1-blue?style=flat)
+![License](https://img.shields.io/badge/license-Sprucetrap_SAL_1.0-yellow?style=flat)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat)
 
 </div>
@@ -279,7 +279,7 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 ├── package.json             # Project metadata, "http" dependency, start script
 ├── .gitattributes           # Treats *.bzg as JavaScript on GitHub
 ├── .gitignore               # Ignores config.js, commit-msg.txt, .claude/, CLAUDE.md
-├── LICENSE                  # MIT License
+├── LICENSE                  # Sprucetrap Source-Available License 1.0
 ├── lib/
 │   ├── http.bzg             # Loads the native http module
 │   ├── http.json            # API description of the http module
@@ -373,7 +373,9 @@ There are no automated tests. Run these manual checks after `bzg run`:
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [Sprucetrap Source-Available License 1.0](LICENSE). Copyright (c) 2026 Sprucetrap ([github.com/Jevoel16](https://github.com/Jevoel16)).
+
+In short: you may view, run, modify and share it for **non-commercial** use, as long as you keep the `LICENSE` file, credit the author visibly with a link ("Based on Jmeet by Sprucetrap (https://github.com/Jevoel16)") and mark your changes. Commercial use, resale and rebranding need written permission. See [`LICENSE`](LICENSE) for the full terms.
 
 <p align="right"><a href="#top">back to top</a></p>
 
