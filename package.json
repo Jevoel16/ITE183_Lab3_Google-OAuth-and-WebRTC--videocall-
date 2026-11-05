@@ -1,6 +1,6 @@
 {
   "name": "ite183-lab3-google-oauth-webrtc",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Jmeet: Google OAuth sign-in and WebRTC video calls on a Bonezegei WebSocket server",
   "main": "app.bzg",
   "scripts": {

@@ -15,7 +15,7 @@
 ![Google Identity Services](https://img.shields.io/badge/Google_Identity_Services-gsi%2Fclient-4285f4?style=flat)
 ![WebRTC](https://img.shields.io/badge/WebRTC-browser_native-2ea44f?style=flat)
 
-![Version](https://img.shields.io/badge/version-1.0.1-blue?style=flat)
+![Version](https://img.shields.io/badge/version-1.1.0-blue?style=flat)
 ![License](https://img.shields.io/badge/license-Sprucetrap_SAL_1.0-yellow?style=flat)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat)
 
@@ -157,6 +157,7 @@ A client ID is not a secret (it is sent to every browser), but each developer sh
 2. Go to **APIs & Services → OAuth consent screen** (Google Auth Platform → Branding / Audience):
    - User type: **External**
    - App name: `Jmeet`, plus your support and developer email
+   - App logo (optional): upload [`screenshots/oauth-logo-120.png`](screenshots/oauth-logo-120.png) (120×120 PNG, under 1 MB, as Google requires). A 512×512 copy, [`screenshots/oauth-logo-512.png`](screenshots/oauth-logo-512.png), is there if you need a larger version. Adding a logo makes Google ask for brand verification before it is shown to users outside your test list; skip it if you don't need it.
    - Publishing status: leave it in **Testing**, and add every Google account that will sign in under **Test users**
 3. Go to **APIs & Services → Credentials → Create credentials → OAuth client ID**:
    - Application type: **Web application**
@@ -291,6 +292,9 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 │   ├── config.example.js    # Template for the Google client ID
 │   └── config.js            # Your client ID (gitignored)
 └── screenshots/             # Logo and laboratory screenshots
+    ├── logo.svg             # App logo (README header)
+    ├── oauth-logo-120.png   # Logo for the Google OAuth consent screen
+    └── oauth-logo-512.png   # Larger PNG of the same logo
 ```
 
 <p align="right"><a href="#top">back to top</a></p>
