@@ -15,9 +15,10 @@
 ![Google Identity Services](https://img.shields.io/badge/Google_Identity_Services-gsi%2Fclient-4285f4?style=flat)
 ![WebRTC](https://img.shields.io/badge/WebRTC-browser_native-2ea44f?style=flat)
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue?style=flat)
+![Version](https://img.shields.io/badge/version-1.1.1-blue?style=flat)
 ![License](https://img.shields.io/badge/license-Sprucetrap_SAL_1.0-yellow?style=flat)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat)
+[![CI](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml/badge.svg)](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml)
 
 </div>
 
@@ -277,6 +278,8 @@ HTTP server listening on port 8000 (High Concurrency Thread-Pool Active)
 ```
 ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 ├── app.bzg                  # Server entry point: HTTP routes + WebSocket relay
+├── .github/workflows/ci.yml # GitHub Actions: runs npm test on push and pull request
+├── scripts/check-syntax.js  # Syntax checks used by npm test and CI
 ├── package.json             # Project metadata, "http" dependency, start script
 ├── .gitattributes           # Treats *.bzg as JavaScript on GitHub
 ├── .gitignore               # Ignores config.js, commit-msg.txt, .claude/, CLAUDE.md
@@ -308,6 +311,7 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 | `bzg install` | Installs the `http` dependency listed in `package.json` |
 | `bzg run` | Runs the `start` script (`bonezegei app.bzg`) on port 8000 |
 | `bonezegei -v` | Prints the installed Bonezegei version |
+| `npm test` | Checks the JSON and JavaScript syntax of the project files (needs Node.js; also run by CI) |
 
 <p align="right"><a href="#top">back to top</a></p>
 
@@ -315,7 +319,9 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 
 ## Testing
 
-There are no automated tests. Run these manual checks after `bzg run`:
+`npm test` (Node.js) runs syntax checks on `package.json`, `public/config.example.js` and the inline scripts in the HTML pages. [GitHub Actions CI](.github/workflows/ci.yml) runs the same command on every push and pull request to `main`. The server itself only runs on Windows with Bonezegei, so the app is tested by hand.
+
+Run these manual checks after `bzg run`:
 
 <details>
 <summary><b>Manual test checklist</b></summary>
@@ -367,8 +373,9 @@ There are no automated tests. Run these manual checks after `bzg run`:
 ## Contributing
 
 1. Create a branch with a matching prefix, for example `feat/short-description` or `fix/short-description`.
-2. Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `style:`, `perf:`, `test:`. Use a short imperative subject (72 characters or less), a blank line, then one bullet per change.
-3. Run the [manual checks](#testing) before opening a pull request.
+2. Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `style:`, `perf:`, `test:`, `ci:`. Use a short imperative subject (72 characters or less) that ends with the bumped [SemVer](https://semver.org/) version, a blank line, then one bullet per change. Example: `feat: add CSV export (v1.4.0)`.
+   - Version bumps: breaking change → major, `feat` → minor, anything else → patch. Update `package.json` `version` and the README version badge in the same commit.
+3. Run `npm test` and the [manual checks](#testing) before opening a pull request.
 4. **Update this README with every change** (features, configuration, structure and badges).
 
 <p align="right"><a href="#top">back to top</a></p>
