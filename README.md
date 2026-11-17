@@ -15,7 +15,7 @@
 ![Google Identity Services](https://img.shields.io/badge/Google_Identity_Services-gsi%2Fclient-4285f4?style=flat)
 ![WebRTC](https://img.shields.io/badge/WebRTC-browser_native-2ea44f?style=flat)
 
-![Version](https://img.shields.io/badge/version-1.1.2-blue?style=flat)
+![Version](https://img.shields.io/badge/version-1.2.0-blue?style=flat)
 ![License](https://img.shields.io/badge/license-Sprucetrap_SAL_1.0-yellow?style=flat)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat)
 [![CI](https://img.shields.io/github/actions/workflow/status/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/ci.yml?branch=main&label=CI&style=flat)](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml)
@@ -51,7 +51,7 @@ Jmeet is a browser-based meeting room in the style of Google Meet. Laboratory 3 
 1. **Google OAuth sign-in.** Participants must sign in with their Google account (OAuth 2.0 / OpenID Connect through Google Identity Services) before they can join. Their Google name and profile photo are used in the call.
 2. **WebRTC video calling.** Audio and video go peer-to-peer between browsers. The Bonezegei server (`app.bzg`) only relays the signaling messages (offer / answer / ICE) and chat over WebSocket.
 
-The app runs locally at `http://localhost:8000`.
+The app runs locally at `http://localhost:8000`. To let people on other networks join, share it through a Cloudflare quick tunnel (see [Share it online](#share-it-online)).
 
 <p align="right"><a href="#top">back to top</a></p>
 
@@ -98,6 +98,8 @@ The app runs locally at `http://localhost:8000`.
 | Google Cloud project | Free; used only for the OAuth client ID |
 | Browser | Chrome, Edge or Firefox, with a camera and microphone for video |
 | Internet | Needed to load Google's sign-in script and to sign in |
+| Node.js (optional) | For `npm test` and the tunnel proxy (`scripts/tunnel-proxy.js`) |
+| cloudflared (optional) | To share the app online: `winget install Cloudflare.cloudflared` |
 
 Install Bonezegei on Windows from the **Microsoft Store** (uninstall older versions first). Then check the version:
 
@@ -165,6 +167,7 @@ A client ID is not a secret (it is sent to every browser), but each developer sh
    - **Authorized JavaScript origins**: add both
      - `http://localhost:8000`
      - `http://localhost`
+     - your tunnel URL, if you share the app online (see [Share it online](#share-it-online))
    - Authorized redirect URIs: leave empty (the popup flow doesn't use one)
 4. Copy the **Client ID** into `public/config.js`.
 
@@ -198,6 +201,32 @@ HTTP server listening on port 8000 (High Concurrency Thread-Pool Active)
 5. A second participant opens the same URL in another window or browser, signs in (with the same or a different Google account) and joins. Video, audio and chat start straight away.
 6. Use the controls to mute, turn off the camera (your Google photo is shown instead), present your screen, chat, or **Leave**.
 7. Click **Sign out** on the join screen to switch accounts.
+
+### Share it online
+
+A Cloudflare quick tunnel gives the app a public `https://….trycloudflare.com` address with a valid certificate. It's free and needs no account. The app stays on your PC, so it's only online while `bzg run` and the tunnel are running.
+
+Run each command in its own terminal, from the project root:
+
+```bash
+bzg run
+```
+
+```bash
+node scripts/tunnel-proxy.js
+```
+
+```bash
+cloudflared tunnel --url http://localhost:8001
+```
+
+1. Copy the `https://….trycloudflare.com` address that cloudflared prints. It can take up to a minute to start working.
+2. Add that address to the client's **Authorized JavaScript origins** (see [Creating the Google OAuth client ID](#creating-the-google-oauth-client-id)) and wait a few minutes.
+3. Share the address. Everyone who signs in must be a test user while the app is in Testing mode.
+
+The tunnel points at the proxy on port 8001, not at port 8000. cloudflared sends the WebSocket header as `Sec-Websocket-Key`, and Bonezegei's `http.dll` only accepts `Sec-WebSocket-Key`, so without the proxy the page loads but never connects. The proxy fixes the header's capitalization and passes everything else through unchanged.
+
+The address changes every time you start cloudflared, so you add the new one to Google each time. Two people on very different networks (mobile data and home Wi-Fi, for example) may still fail to connect video, because the app only uses a STUN server and has no TURN relay.
 
 ### Screenshots
 
@@ -279,7 +308,10 @@ HTTP server listening on port 8000 (High Concurrency Thread-Pool Active)
 ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 ├── app.bzg                  # Server entry point: HTTP routes + WebSocket relay
 ├── .github/workflows/ci.yml # GitHub Actions: runs npm test on push and pull request
-├── scripts/check-syntax.js  # Syntax checks used by npm test and CI
+├── scripts/
+│   ├── check-syntax.js      # Syntax checks used by npm test and CI
+│   ├── tunnel-proxy.js      # Port 8001 proxy that fixes the WebSocket header for cloudflared
+│   └── tunnel-proxy.test.js # Unit tests for the header fix
 ├── package.json             # Project metadata, "http" dependency, start script
 ├── .gitattributes           # Treats *.bzg as JavaScript on GitHub
 ├── .gitignore               # Ignores config.js, commit-msg.txt, .claude/, CLAUDE.md
@@ -311,7 +343,9 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 | `bzg install` | Installs the `http` dependency listed in `package.json` |
 | `bzg run` | Runs the `start` script (`bonezegei app.bzg`) on port 8000 |
 | `bonezegei -v` | Prints the installed Bonezegei version |
-| `npm test` | Checks the JSON and JavaScript syntax of the project files (needs Node.js; also run by CI) |
+| `npm test` | Checks the JSON and JavaScript syntax of the project files and runs the tunnel proxy tests (needs Node.js; also run by CI) |
+| `node scripts/tunnel-proxy.js` | Starts the proxy on port 8001 for a Cloudflare tunnel (see [Share it online](#share-it-online)) |
+| `cloudflared tunnel --url http://localhost:8001` | Opens a quick tunnel and prints the public address |
 
 <p align="right"><a href="#top">back to top</a></p>
 
@@ -319,7 +353,7 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 
 ## Testing
 
-`npm test` (Node.js) runs syntax checks on `package.json`, `public/config.example.js` and the inline scripts in the HTML pages. [GitHub Actions CI](.github/workflows/ci.yml) runs the same command on every push and pull request to `main`. The server itself only runs on Windows with Bonezegei, so the app is tested by hand.
+`npm test` (Node.js) runs syntax checks on `package.json`, `public/config.example.js` and the inline scripts in the HTML pages, then the `node:test` unit tests for the tunnel proxy's header fix. [GitHub Actions CI](.github/workflows/ci.yml) runs the same command on every push and pull request to `main`. The server itself only runs on Windows with Bonezegei, so the app is tested by hand.
 
 Run these manual checks after `bzg run`:
 
@@ -340,6 +374,7 @@ Run these manual checks after `bzg run`:
 | 10 | Open `http://localhost:8000/does-not-exist` | Custom 404 page |
 | 11 | Turn the mic and camera off on the join screen, then join | Buttons turn red and the preview shows "Camera is off"; in the call your tile and the other window show the photo and mic-off badge, with no audio |
 | 12 | Turn them back on in the call | The other window sees video and hears audio |
+| 13 | Start the tunnel proxy and cloudflared, then open the tunnel address on a phone | Page loads over HTTPS, shows `Connected to wss://…`, and joins a call with your PC |
 
 </details>
 
@@ -363,6 +398,10 @@ Run these manual checks after `bzg run`:
 | Camera preview is blank | Allow camera and microphone in the browser, and close other apps using the camera |
 | "Disconnected from server" | Make sure `bzg run` is running from the project root |
 | Port 8000 already in use | Find the process with `Get-NetTCPConnection -LocalPort 8000` and stop it |
+| Tunnel page loads but says "Could not reach wss://…" | Point cloudflared at the proxy (`--url http://localhost:8001`) and make sure `node scripts/tunnel-proxy.js` is running |
+| Every tunnel address returns an empty 404 | cloudflared is loading an old `%USERPROFILE%\.cloudflared\config.yml` with its own ingress rules. Rename that file, or pass an empty config with `--config <empty.yml>` |
+| Tunnel address doesn't resolve right away | New addresses take up to a minute. If it still fails, your DNS may have cached the miss: run `ipconfig /flushdns` |
+| `origin_mismatch` on the tunnel address | Add the current `https://….trycloudflare.com` address to the Authorized JavaScript origins; it changes on every run |
 
 </details>
 
