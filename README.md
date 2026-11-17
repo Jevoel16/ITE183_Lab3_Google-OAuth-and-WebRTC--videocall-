@@ -15,7 +15,7 @@
 ![Google Identity Services](https://img.shields.io/badge/Google_Identity_Services-gsi%2Fclient-4285f4?style=flat)
 ![WebRTC](https://img.shields.io/badge/WebRTC-browser_native-2ea44f?style=flat)
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue?style=flat)
+![Version](https://img.shields.io/badge/version-1.2.1-blue?style=flat)
 ![License](https://img.shields.io/badge/license-Sprucetrap_SAL_1.0-yellow?style=flat)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat)
 [![CI](https://img.shields.io/github/actions/workflow/status/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/ci.yml?branch=main&label=CI&style=flat)](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml)
@@ -217,8 +217,10 @@ node scripts/tunnel-proxy.js
 ```
 
 ```bash
-cloudflared tunnel --url http://localhost:8001
+cloudflared tunnel --config NUL --url http://localhost:8001
 ```
+
+`--config NUL` stops cloudflared from loading `%USERPROFILE%\.cloudflared\config.yml`. A named tunnel's config there has a catch-all rule that answers every quick tunnel address with an empty 404. The "Configuration file NUL was empty" line it prints is harmless.
 
 1. Copy the `https://….trycloudflare.com` address that cloudflared prints. It can take up to a minute to start working.
 2. Add that address to the client's **Authorized JavaScript origins** (see [Creating the Google OAuth client ID](#creating-the-google-oauth-client-id)) and wait a few minutes.
@@ -345,7 +347,7 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 | `bonezegei -v` | Prints the installed Bonezegei version |
 | `npm test` | Checks the JSON and JavaScript syntax of the project files and runs the tunnel proxy tests (needs Node.js; also run by CI) |
 | `node scripts/tunnel-proxy.js` | Starts the proxy on port 8001 for a Cloudflare tunnel (see [Share it online](#share-it-online)) |
-| `cloudflared tunnel --url http://localhost:8001` | Opens a quick tunnel and prints the public address |
+| `cloudflared tunnel --config NUL --url http://localhost:8001` | Opens a quick tunnel and prints the public address |
 
 <p align="right"><a href="#top">back to top</a></p>
 
@@ -399,7 +401,7 @@ Run these manual checks after `bzg run`:
 | "Disconnected from server" | Make sure `bzg run` is running from the project root |
 | Port 8000 already in use | Find the process with `Get-NetTCPConnection -LocalPort 8000` and stop it |
 | Tunnel page loads but says "Could not reach wss://…" | Point cloudflared at the proxy (`--url http://localhost:8001`) and make sure `node scripts/tunnel-proxy.js` is running |
-| Every tunnel address returns an empty 404 | cloudflared is loading an old `%USERPROFILE%\.cloudflared\config.yml` with its own ingress rules. Rename that file, or pass an empty config with `--config <empty.yml>` |
+| Every tunnel address returns an empty 404 | cloudflared is loading `%USERPROFILE%\.cloudflared\config.yml` and its ingress rules. Start the tunnel with `--config NUL` |
 | Tunnel address doesn't resolve right away | New addresses take up to a minute. If it still fails, your DNS may have cached the miss: run `ipconfig /flushdns` |
 | `origin_mismatch` on the tunnel address | Add the current `https://….trycloudflare.com` address to the Authorized JavaScript origins; it changes on every run |
 
