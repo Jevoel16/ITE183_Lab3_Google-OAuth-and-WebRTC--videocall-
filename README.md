@@ -134,14 +134,15 @@ bonezegei -v
    bzg install
    ```
 
-3. **Create your config file** from the template
+3. **Create your `.env`**: copy the Local block of `.env.example` into a new `.env` and fill in your Google client ID, and optionally your GitHub OAuth app and TURN server (see [Configuration](#configuration)). Keys left as `YOUR_...` are skipped.
+
+4. **Write the browser config** from `.env`
 
    ```bash
-   copy public\config.example.js public\config.js
+   npm run config
    ```
 
-4. **Add your Google client ID** to `public/config.js` (see [Configuration](#configuration)).
-5. **For GitHub sign-in (optional)**, copy the Local block of `.env.example` into a new `.env` and fill in your GitHub OAuth app's ID and secret (see [Creating the GitHub OAuth app](#creating-the-github-oauth-app)).
+   This creates `public/config.js`. Without Node.js, copy `public/config.example.js` to `public/config.js` and fill it in by hand instead.
 
 <p align="right"><a href="#top">back to top</a></p>
 
@@ -149,7 +150,19 @@ bonezegei -v
 
 ## Configuration
 
-Browser settings live in `public/config.js`:
+Every key lives in `.env`, in one of the three blocks of `.env.example`:
+
+| Key | Example | Used by |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | `123456789-abc123.apps.googleusercontent.com` | Browser (Google button) |
+| `GITHUB_CLIENT_ID` | `Ov23li...` | GitHub helper; also turns on the GitHub button |
+| `GITHUB_CLIENT_SECRET` | (secret) | GitHub helper only, never sent to the browser |
+| `APP_URL` | `http://localhost:8000` | GitHub helper: where to send people back after sign-in |
+| `GITHUB_CALLBACK_URL` | `http://localhost:8002/auth/github/callback` | GitHub helper; must match the callback URL on GitHub |
+| `TURN_URLS` | `turn:relay.example:3478,turns:relay.example:443?transport=tcp` | Browser (TURN relay), comma-separated |
+| `TURN_USERNAME` / `TURN_CREDENTIAL` | (from your TURN provider) | Browser (TURN relay) |
+
+The browser can't read `.env`, so `npm run config` writes `public/config.js` from it. Run it again after you change `.env`. It refuses to write when neither Google nor GitHub is set, so an existing `config.js` is never wiped. The generated file looks like this:
 
 ```js
 window.JMEET_CONFIG = {
@@ -161,21 +174,12 @@ window.JMEET_CONFIG = {
 };
 ```
 
-The GitHub helper reads `.env`:
-
-| Key | Example | Purpose |
-|---|---|---|
-| `GITHUB_CLIENT_ID` | `Ov23li...` | GitHub OAuth app client ID |
-| `GITHUB_CLIENT_SECRET` | (secret) | GitHub OAuth app client secret, only ever read by the helper |
-| `APP_URL` | `http://localhost:8000` | Where the helper sends people back after sign-in |
-| `GITHUB_CALLBACK_URL` | `http://localhost:8002/auth/github/callback` | Must match the app's callback URL on GitHub |
-
 | File | Committed? | Purpose |
 |---|---|---|
-| `public/config.example.js` | Yes | Template for `config.js` |
-| `public/config.js` | No (gitignored) | Your Google client ID, GitHub helper URL and TURN servers |
 | `.env.example` | Yes | Placeholder keys in Local, Development and Production blocks |
-| `.env` | No (gitignored) | Your GitHub client ID and secret |
+| `.env` | No (gitignored) | All your keys |
+| `public/config.js` | No (gitignored) | Written by `npm run config` from `.env` |
+| `public/config.example.js` | Yes | Shape of `config.js`, for filling in by hand without Node.js |
 
 The Google client ID and TURN details are sent to every browser anyway. The GitHub client secret is the only real secret, and it stays in `.env` and the helper.
 
@@ -194,7 +198,7 @@ The Google client ID and TURN details are sent to every browser anyway. The GitH
      - `http://localhost`
      - your tunnel URL, if you share the app online (see [Share it online](#share-it-online))
    - Authorized redirect URIs: leave empty (the popup flow doesn't use one)
-4. Copy the **Client ID** into `public/config.js`.
+4. Put the **Client ID** in `GOOGLE_CLIENT_ID` in `.env` and run `npm run config`.
 
 > New origins can take a few minutes to start working.
 
@@ -203,13 +207,13 @@ The Google client ID and TURN details are sent to every browser anyway. The GitH
 1. Open GitHub **Settings → Developer settings → OAuth Apps → New OAuth App**.
 2. Homepage URL: `http://localhost:8000`. Authorization callback URL: `http://localhost:8002/auth/github/callback`.
 3. Copy the **Client ID**, click **Generate a new client secret**, and put both in `.env`.
-4. Start the helper next to the server with `npm run auth`.
+4. Run `npm run config` (to show the GitHub button), then start the helper next to the server with `npm run auth`.
 
 GitHub allows one callback URL per OAuth app, and quick-tunnel addresses change on every run, so GitHub sign-in works on localhost only for now. With a fixed tunnel hostname, fill in the Development block of `.env.example` and route `/auth/github` on that hostname to port 8002.
 
 ### Adding a TURN server
 
-STUN lets two browsers find a direct path. Between very different networks (mobile data and home Wi-Fi) that path often fails, or carries audio in one direction only. A TURN server relays the media instead. Free options include Metered's Open Relay and Cloudflare's TURN service; create an account, copy the TURN URLs, username and credential into `iceServers` in `public/config.js`, and reload.
+STUN lets two browsers find a direct path. Between very different networks (mobile data and home Wi-Fi) that path often fails, or carries audio in one direction only. A TURN server relays the media instead. Free options include Metered's Open Relay and Cloudflare's TURN service; create an account, put the TURN URLs, username and credential in `TURN_URLS`, `TURN_USERNAME` and `TURN_CREDENTIAL` in `.env`, run `npm run config`, and reload.
 
 <p align="right"><a href="#top">back to top</a></p>
 
@@ -223,7 +227,7 @@ STUN lets two browsers find a direct path. Between very different networks (mobi
 bzg run
 ```
 
-`bzg run` starts every script in `package.json` at once (`start`, `test` and `auth`). For GitHub sign-in, also run `npm run auth` in its own terminal so you can see its output; without a `.env` it prints the missing keys and exits, and the call still works with Google sign-in. To run only the server, use `bonezegei app.bzg`.
+`bzg run` starts every script in `package.json` at once (`start`, `test`, `config` and `auth`). For GitHub sign-in, also run `npm run auth` in its own terminal so you can see its output; without a `.env` it prints the missing keys and exits, and the call still works with Google sign-in. To run only the server, use `bonezegei app.bzg`.
 
 Expected output:
 
@@ -377,6 +381,8 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 │   ├── check-syntax.js      # Syntax checks used by npm test and CI
 │   ├── github-auth.js       # Port 8002 helper for GitHub sign-in
 │   ├── github-auth.test.js  # Unit tests for the helper
+│   ├── write-config.js      # npm run config: writes public/config.js from .env
+│   ├── write-config.test.js # Unit tests for the config writer
 │   ├── jmeet-core.test.js   # Unit tests for public/jmeet-core.js
 │   ├── tunnel-proxy.js      # Port 8001 proxy that fixes the WebSocket header for cloudflared
 │   └── tunnel-proxy.test.js # Unit tests for the header fix
@@ -384,7 +390,7 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 │   └── state-machines.md    # Connection and sign-in state machines
 ├── package.json             # Project metadata, "http" dependency, start/test/auth scripts
 ├── .nvmrc                   # Node.js version (26, Active LTS)
-├── .env.example             # GitHub helper keys (copy to .env)
+├── .env.example             # Every key: Google, GitHub, TURN (copy to .env)
 ├── .gitattributes           # Treats *.bzg as JavaScript on GitHub
 ├── .gitignore               # Ignores config.js, .env, commit-msg.txt, .claude/, CLAUDE.md
 ├── LICENSE                  # Sprucetrap Source-Available License 1.0
@@ -397,8 +403,8 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 │   ├── jmeet-core.js        # Room codes, state machines and parsers (also used by tests)
 │   ├── style.css            # Styles for index.html and 404.html
 │   ├── 404.html             # Custom Not Found page
-│   ├── config.example.js    # Template for config.js
-│   └── config.js            # Your client ID, GitHub helper URL, TURN servers (gitignored)
+│   ├── config.example.js    # Shape of config.js, for filling in by hand
+│   └── config.js            # Written by npm run config from .env (gitignored)
 └── screenshots/             # Logo and laboratory screenshots
     ├── logo.svg             # App logo (README header)
     ├── oauth-logo-120.png   # Logo for the Google OAuth consent screen
@@ -417,6 +423,7 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 | `bzg run` | Runs every `package.json` script at once: the server on port 8000, the tests and the GitHub helper |
 | `bonezegei app.bzg` | Runs only the server on port 8000 |
 | `bonezegei -v` | Prints the installed Bonezegei version |
+| `npm run config` | Writes `public/config.js` from `.env` |
 | `npm run auth` | Starts the GitHub sign-in helper on port 8002 (reads `.env`) |
 | `npm test` | Checks the JSON and JavaScript syntax of the project files and runs every `node:test` suite in `scripts/` (also run by CI) |
 | `node scripts/tunnel-proxy.js` | Starts the proxy on port 8001 for a Cloudflare tunnel (see [Share it online](#share-it-online)) |
@@ -428,7 +435,7 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 
 ## Testing
 
-`npm test` (Node.js) runs syntax checks on `package.json`, `public/config.example.js` and the inline scripts in the HTML pages, then the `node:test` suites: room codes, both state machines (every allowed transition and some rejected ones), the GitHub redirect parser, the GitHub helper's config, state and callback handling, and the tunnel proxy's header fix. [GitHub Actions CI](.github/workflows/ci.yml) runs the same command on every push and pull request to `main`. The server itself only runs on Windows with Bonezegei, so the app is tested by hand.
+`npm test` (Node.js) runs syntax checks on `package.json`, `public/config.example.js` and the inline scripts in the HTML pages, then the `node:test` suites: room codes, both state machines (every allowed transition and some rejected ones), the GitHub redirect parser, the GitHub helper's config, state and callback handling, the config writer, and the tunnel proxy's header fix. [GitHub Actions CI](.github/workflows/ci.yml) runs the same command on every push and pull request to `main`. The server itself only runs on Windows with Bonezegei, so the app is tested by hand.
 
 Run these manual checks after `bzg run`:
 
@@ -470,7 +477,7 @@ Run these manual checks after `bzg run`:
 |---|---|
 | `Error 400: origin_mismatch` or "The given origin is not allowed" | Add `http://localhost:8000` **and** `http://localhost` to the client's Authorized JavaScript origins, then wait a few minutes |
 | `Error 403: access_denied` | The app is in Testing mode: add the account under **OAuth consent screen → Test users** |
-| "Google sign-in is not configured" | Create `public/config.js` from `config.example.js` and paste your client ID |
+| "Sign-in is not configured" | Set `GOOGLE_CLIENT_ID` in `.env` and run `npm run config` |
 | "Sign-in failed: Token was issued for a different app" | The client ID in `config.js` doesn't match the one the token was issued for; recheck it |
 | Google button doesn't appear | Check your internet connection, and disable ad/tracker blockers for `accounts.google.com` |
 | Opening via `http://127.0.0.1:8000` or a LAN IP fails to sign in | Use `http://localhost:8000`; Google only allows the origins you registered, and browsers block the camera on plain HTTP except localhost |
@@ -480,7 +487,8 @@ Run these manual checks after `bzg run`:
 | "Tap to hear the call" button | The phone blocked audio until a tap. Tap it once |
 | GitHub sign-in: "Missing in .env: ..." | Copy the Local block of `.env.example` into `.env` and fill in the GitHub keys |
 | GitHub sign-in: `redirect_uri` mismatch | The callback URL on GitHub must be exactly `GITHUB_CALLBACK_URL` |
-| No GitHub button | Set `githubAuthUrl` in `public/config.js` |
+| No GitHub button | Set `GITHUB_CLIENT_ID` and `GITHUB_CALLBACK_URL` in `.env` and run `npm run config` |
+| `npm run config`: "Set GOOGLE_CLIENT_ID or the GitHub keys" | `.env` is missing or still has `YOUR_...` placeholders; `config.js` was left as it was |
 | Port 8000 already in use | Find the process with `Get-NetTCPConnection -LocalPort 8000` and stop it |
 | Tunnel page loads but says "Could not reach wss://…" | Point cloudflared at the proxy (`--url http://localhost:8001`) and make sure `node scripts/tunnel-proxy.js` is running |
 | Every tunnel address returns an empty 404 | cloudflared is loading `%USERPROFILE%\.cloudflared\config.yml` and its ingress rules. Start the tunnel with `--config NUL` |

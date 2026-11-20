@@ -1,4 +1,5 @@
-// Copy this file to public/config.js and fill in what you use.
+// Shape of public/config.js. Normally npm run config writes config.js from
+// .env (see .env.example); copy this file by hand only if you don't use Node.
 // Everything here is sent to the browser anyway, but config.js is gitignored
 // so each developer can use their own Google, GitHub and TURN accounts.
 window.JMEET_CONFIG = {
