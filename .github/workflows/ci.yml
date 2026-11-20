@@ -23,7 +23,7 @@ jobs:
       # native DLL vendored in lib/, so there's nothing to install.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
 
       - name: Syntax checks
         run: npm test
