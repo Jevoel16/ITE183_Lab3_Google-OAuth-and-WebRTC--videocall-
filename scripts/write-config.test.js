@@ -4,7 +4,7 @@ const vm = require("node:vm");
 const { buildConfig, renderConfigJs } = require("./write-config.js");
 
 const GOOGLE = { GOOGLE_CLIENT_ID: "123-abc.apps.googleusercontent.com" };
-const GITHUB = { GITHUB_CLIENT_ID: "Ov23li", GITHUB_CALLBACK_URL: "http://localhost:8002/auth/github/callback" };
+const GITHUB = { GITHUB_CLIENT_ID: "Ov23li", GITHUB_CALLBACK_URL: "http://localhost:8001/auth/github/callback" };
 
 test("buildConfig reads Google, GitHub and TURN keys", () => {
     const config = buildConfig({
@@ -14,7 +14,7 @@ test("buildConfig reads Google, GitHub and TURN keys", () => {
     });
     assert.deepEqual(config, {
         googleClientId: "123-abc.apps.googleusercontent.com",
-        githubAuthUrl: "http://localhost:8002/auth/github",
+        githubAuthUrl: "http://localhost:8001/auth/github",
         iceServers: [{ urls: ["turn:relay.example:3478", "turns:relay.example:443?transport=tcp"],
                        username: "user", credential: "pass" }]
     });

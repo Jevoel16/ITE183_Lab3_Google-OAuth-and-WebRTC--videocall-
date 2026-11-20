@@ -73,7 +73,7 @@ test("isAllowedPicture only accepts Google and GitHub avatars over https", () =>
     assert.equal(core.isAllowedPicture("not a url"), false);
 });
 
-test("parseAuthFragment reads the GitHub helper redirect", () => {
+test("parseAuthFragment reads the gateway redirect after GitHub sign-in", () => {
     const hash = "#auth=" + toB64Url({ provider: "github", name: "Ana", email: "a@b.c",
         picture: "https://avatars.githubusercontent.com/u/1", exp: future }) + "&room=abc-defg-hij";
     assert.deepEqual(core.parseAuthFragment(hash, NOW), {

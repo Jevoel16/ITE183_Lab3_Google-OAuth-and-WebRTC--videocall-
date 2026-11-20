@@ -11,7 +11,7 @@ const isSet = (value) => !!value && !value.startsWith("YOUR_");
 // Turns .env values into the object the page reads as window.JMEET_CONFIG
 function buildConfig(env) {
     const googleClientId = isSet(env.GOOGLE_CLIENT_ID) ? env.GOOGLE_CLIENT_ID : "";
-    // The sign-in route lives next to the callback on the GitHub helper
+    // The sign-in route lives next to the callback on the gateway
     const githubAuthUrl = isSet(env.GITHUB_CLIENT_ID) && isSet(env.GITHUB_CALLBACK_URL)
         ? new URL("/auth/github", env.GITHUB_CALLBACK_URL).toString()
         : "";

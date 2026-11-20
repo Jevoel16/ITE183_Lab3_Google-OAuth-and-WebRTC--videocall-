@@ -7,13 +7,18 @@ const ENV = {
     GITHUB_CLIENT_ID: "abc123",
     GITHUB_CLIENT_SECRET: "shh",
     APP_URL: "http://localhost:8000",
-    GITHUB_CALLBACK_URL: "http://localhost:8002/auth/github/callback"
+    GITHUB_CALLBACK_URL: "http://localhost:8001/auth/github/callback"
 };
 const config = auth.loadConfig(ENV);
 
-test("loadConfig lists every missing or placeholder key", () => {
-    assert.throws(() => auth.loadConfig({ APP_URL: "http://x", GITHUB_CLIENT_ID: "YOUR_ID" }),
-        /GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_CALLBACK_URL/);
+test("loadConfig returns null when GitHub isn't set up at all", () => {
+    assert.equal(auth.loadConfig({}), null);
+    assert.equal(auth.loadConfig({ GITHUB_CLIENT_ID: "YOUR_ID", GITHUB_CLIENT_SECRET: "YOUR_SECRET" }), null);
+});
+
+test("loadConfig lists every missing or placeholder key when half set up", () => {
+    assert.throws(() => auth.loadConfig({ GITHUB_CLIENT_ID: "abc", APP_URL: "YOUR_URL" }),
+        /GITHUB_CLIENT_SECRET, APP_URL, GITHUB_CALLBACK_URL/);
 });
 
 test("loadConfig rejects a broken URL and normalizes APP_URL", () => {

@@ -1,19 +1,20 @@
-// GitHub sign-in helper. GitHub only hands out a profile after a server
-// swaps the login code for a token using the client secret, and Bonezegei
-// can't make HTTPS requests, so this small Node server does that step.
+// GitHub sign-in routes, served by scripts/gateway.js. GitHub only hands out
+// a profile after a server swaps the login code for a token using the client
+// secret, and Bonezegei can't make HTTPS requests, so Node does that step.
 // The token is used once to read the profile and never reaches the browser.
-const http = require("node:http");
 const crypto = require("node:crypto");
 const { isRoomCode } = require("../public/jmeet-core.js");
 
-const PORT = 8002;
 const STATE_TTL_MS = 10 * 60 * 1000;
 const SESSION_SECONDS = 8 * 60 * 60;
 const REQUIRED_KEYS = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "APP_URL", "GITHUB_CALLBACK_URL"];
+const isSet = (value) => !!value && !value.startsWith("YOUR_");
 
-// Fails fast with every missing or broken key listed at once
+// null when GitHub isn't set up at all (Google-only is fine); fails fast,
+// listing every missing or broken key, when it's only half set up
 function loadConfig(env) {
-    const missing = REQUIRED_KEYS.filter((key) => !env[key] || env[key].startsWith("YOUR_"));
+    if (!isSet(env.GITHUB_CLIENT_ID) && !isSet(env.GITHUB_CLIENT_SECRET)) return null;
+    const missing = REQUIRED_KEYS.filter((key) => !isSet(env[key]));
     if (missing.length) throw new Error(`Missing in .env: ${missing.join(", ")} (see .env.example)`);
     for (const key of ["APP_URL", "GITHUB_CALLBACK_URL"]) {
         try { new URL(env[key]); } catch (e) { throw new Error(`${key} is not a valid URL: ${env[key]}`); }
@@ -114,10 +115,6 @@ function createHandler(config, store, deps = { exchangeCode, fetchGitHubUser }) 
             res.writeHead(405, { Allow: "GET" });
             return res.end();
         }
-        if (url.pathname === "/health") {
-            res.writeHead(200, { "Content-Type": "text/plain" });
-            return res.end("ok");
-        }
         if (url.pathname === "/auth/github") {
             return redirect(res, buildAuthorizeUrl(config, store.issue(url.searchParams.get("room"))));
         }
@@ -139,28 +136,6 @@ function createHandler(config, store, deps = { exchangeCode, fetchGitHubUser }) 
         res.end("Not found");
     };
 }
-
-function start() {
-    let config;
-    try {
-        config = loadConfig(process.env);
-    } catch (err) {
-        console.error(err.message);
-        process.exit(1);
-    }
-    const server = http.createServer(createHandler(config, createStateStore()));
-    server.on("error", (err) => {
-        console.error(err.code === "EADDRINUSE"
-            ? `Port ${PORT} is already in use. Stop the other process and try again.`
-            : err.message);
-        process.exit(1);
-    });
-    server.listen(PORT, () => {
-        console.log(`GitHub sign-in helper on http://localhost:${PORT}/auth/github -> back to ${config.appUrl}`);
-    });
-}
-
-if (require.main === module) start();
 
 module.exports = {
     loadConfig, buildAuthorizeUrl, createStateStore, profileFromGitHubUser,

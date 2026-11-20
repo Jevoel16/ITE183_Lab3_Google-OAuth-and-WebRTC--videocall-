@@ -99,7 +99,7 @@
         return new TextDecoder().decode(bytes);
     }
 
-    // The GitHub helper redirects back to "#auth=<base64url JSON>&room=<code>"
+    // The gateway redirects back from GitHub to "#auth=<base64url JSON>&room=<code>"
     function parseAuthFragment(hash, now) {
         const params = new URLSearchParams(String(hash || "").replace(/^#/, ""));
         const auth = params.get("auth");
