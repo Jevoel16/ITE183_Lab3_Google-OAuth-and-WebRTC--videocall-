@@ -162,6 +162,8 @@ Every key lives in `.env`, in one of the three blocks of `.env.example`:
 | `TURN_URLS` | `turn:relay.example:3478,turns:relay.example:443?transport=tcp` | Browser (TURN relay), comma-separated |
 | `TURN_USERNAME` / `TURN_CREDENTIAL` | (from your TURN provider) | Browser (TURN relay) |
 
+Google sign-in needs no client secret. The Sign in with Google popup hands the browser a signed ID token, so only the client ID is used. A secret is only needed for Google's server-side code flow, which this app doesn't use.
+
 The browser can't read `.env`, so `npm run config` writes `public/config.js` from it. Run it again after you change `.env`. It refuses to write when neither Google nor GitHub is set, so an existing `config.js` is never wiped. The generated file looks like this:
 
 ```js
@@ -182,6 +184,14 @@ window.JMEET_CONFIG = {
 | `public/config.example.js` | Yes | Shape of `config.js`, for filling in by hand without Node.js |
 
 The Google client ID and TURN details are sent to every browser anyway. The GitHub client secret is the only real secret, and it stays in `.env` and the helper.
+
+### Ports
+
+| Port | Program | Use |
+|---|---|---|
+| 8000 | `app.bzg` | The app: page and WebSocket. Open this one locally |
+| 8001 | `scripts/tunnel-proxy.js` | Only for the Cloudflare tunnel: fixes the WebSocket header and forwards to 8000 |
+| 8002 | `scripts/github-auth.js` | GitHub sign-in helper |
 
 ### Creating the Google OAuth client ID
 
@@ -487,6 +497,7 @@ Run these manual checks after `bzg run`:
 | "Tap to hear the call" button | The phone blocked audio until a tap. Tap it once |
 | GitHub sign-in: "Missing in .env: ..." | Copy the Local block of `.env.example` into `.env` and fill in the GitHub keys |
 | GitHub sign-in: `redirect_uri` mismatch | The callback URL on GitHub must be exactly `GITHUB_CALLBACK_URL` |
+| App opened on `localhost:8001` and sign-in misbehaves | Port 8001 is the tunnel proxy. Google needs that origin added, and GitHub returns you to `APP_URL` (8000). Use `http://localhost:8000` locally |
 | No GitHub button | Set `GITHUB_CLIENT_ID` and `GITHUB_CALLBACK_URL` in `.env` and run `npm run config` |
 | `npm run config`: "Set GOOGLE_CLIENT_ID or the GitHub keys" | `.env` is missing or still has `YOUR_...` placeholders; `config.js` was left as it was |
 | Port 8000 already in use | Find the process with `Get-NetTCPConnection -LocalPort 8000` and stop it |
