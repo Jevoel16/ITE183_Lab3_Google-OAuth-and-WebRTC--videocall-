@@ -509,12 +509,14 @@ p { text-wrap: pretty; }
 #controls {
     grid-row: 2;
     grid-column: 1 / span 2;
-    display: flex;
+    /* Equal side columns keep the middle buttons on the page's center line */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     padding: 12px 24px 18px;
     gap: 12px;
 }
+#rightBtns { justify-self: end; }
 #roomInfo { display: flex; align-items: center; gap: 8px; font-size: 15px; white-space: nowrap; }
 #roomInfo span { color: var(--muted); }
 #clock { font-variant-numeric: tabular-nums; }
@@ -615,7 +617,7 @@ p { text-wrap: pretty; }
         z-index: 5;
     }
     #roomInfo { display: none; }
-    #controls { justify-content: center; padding: 12px 16px 16px; }
+    #controls { display: flex; justify-content: center; padding: 12px 16px 16px; }
     #rightBtns { display: contents; }
     .ctrl { width: 44px; height: 44px; }
     #topBar { padding: 12px 16px; }
