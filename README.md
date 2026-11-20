@@ -193,7 +193,9 @@ You open one port: **8001**, locally and through the tunnel.
 | Port | Program | Use |
 |---|---|---|
 | 8001 | `scripts/gateway.js` | The address you open. Serves `/auth/github` itself and forwards everything else (page, files, WebSocket) to 8000 |
-| 8000 | `app.bzg` | The Bonezegei server behind the gateway. Opening it directly still works, but without GitHub sign-in |
+| 8000 | `app.bzg` | The Bonezegei server behind the gateway |
+
+For local use with Google sign-in only, 8000 alone is enough: run `npm start` and open `http://localhost:8000`. Rooms, calls and chat all work. You need the gateway only for GitHub sign-in or the tunnel.
 
 Bonezegei can't make the HTTPS call GitHub needs, and its `http.dll` rejects the WebSocket header as cloudflared spells it (`Sec-Websocket-Key`), so the gateway sits in front and handles both.
 
@@ -499,9 +501,9 @@ Run these manual checks after `bzg run`:
 | "Tap to hear the call" button | The phone blocked audio until a tap. Tap it once |
 | GitHub sign-in: "Missing in .env: ..." | Copy the Local block of `.env.example` into `.env` and fill in the GitHub keys |
 | GitHub sign-in: `redirect_uri` mismatch | The callback URL on GitHub must be exactly `GITHUB_CALLBACK_URL` |
-| "The app server on port 8000 isn't running" | The gateway is up but Bonezegei isn't. Run `bzg run` from the project root |
-| "GitHub sign-in isn't set up" | Add the GitHub keys to `.env`, run `npm run config`, and restart `bzg run` |
-| No GitHub button on `localhost:8000` | GitHub sign-in lives on the gateway. Open `http://localhost:8001` |
+| "The app server on port 8000 isn't running" | The gateway is up but Bonezegei isn't. Stop it and start both with `npm run dev` |
+| "GitHub sign-in isn't set up" | Add the GitHub keys to `.env` and restart `npm run dev` |
+| GitHub sign-in from `localhost:8000` fails or lands on 8001 | The button points at the gateway (`localhost:8001/auth/github`), so the gateway must be running, and GitHub returns you to `APP_URL` (8001). Use `http://localhost:8001` for GitHub sign-in |
 | No GitHub button | Set `GITHUB_CLIENT_ID` and `GITHUB_CALLBACK_URL` in `.env` and run `npm run config` |
 | `npm run config`: "Set GOOGLE_CLIENT_ID or the GitHub keys" | `.env` is missing or still has `YOUR_...` placeholders; `config.js` was left as it was |
 | Port 8000 already in use | Find the process with `Get-NetTCPConnection -LocalPort 8000` and stop it |
