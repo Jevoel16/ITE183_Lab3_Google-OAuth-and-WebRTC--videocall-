@@ -4,7 +4,6 @@
   "description": "Jmeet: Google OAuth sign-in and WebRTC video calls on a Bonezegei WebSocket server",
   "main": "app.bzg",
   "scripts": {
-    "dev": "bzg run",
     "start": "bonezegei app.bzg",
     "test": "node scripts/check-syntax.js && node --test scripts/tunnel-proxy.test.js"
   },
