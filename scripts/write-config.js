@@ -37,16 +37,21 @@ function renderConfigJs(config) {
         + `window.JMEET_CONFIG = ${JSON.stringify(config, null, 4)};\n`;
 }
 
+// Writes config.js and returns a summary like "Google, GitHub"; throws when
+// .env has no sign-in provider, leaving the old file alone
+function writeConfigFile(env) {
+    const config = buildConfig(env);
+    fs.writeFileSync(OUT_FILE, renderConfigJs(config));
+    return [
+        config.googleClientId && "Google",
+        config.githubAuthUrl && "GitHub",
+        config.iceServers.length && "TURN"
+    ].filter(Boolean).join(", ");
+}
+
 function main() {
     try {
-        const config = buildConfig(process.env);
-        fs.writeFileSync(OUT_FILE, renderConfigJs(config));
-        const parts = [
-            config.googleClientId && "Google",
-            config.githubAuthUrl && "GitHub",
-            config.iceServers.length && "TURN"
-        ].filter(Boolean);
-        console.log(`Wrote public/config.js (${parts.join(", ")})`);
+        console.log(`Wrote public/config.js (${writeConfigFile(process.env)})`);
     } catch (err) {
         console.error(err.message);
         process.exit(1);
@@ -55,4 +60,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { buildConfig, renderConfigJs };
+module.exports = { buildConfig, renderConfigJs, writeConfigFile };

@@ -165,7 +165,7 @@ Every key lives in `.env`, in one of the three blocks of `.env.example`:
 
 Google sign-in needs no client secret. The Sign in with Google popup hands the browser a signed ID token, so only the client ID is used. A secret is only needed for Google's server-side code flow, which this app doesn't use.
 
-The browser can't read `.env`, so `npm run config` writes `public/config.js` from it. Run it again after you change `.env`. It refuses to write when neither Google nor GitHub is set, so an existing `config.js` is never wiped. The generated file looks like this:
+The browser can't read `.env`, so `npm run config` writes `public/config.js` from it. `npm run dev` and `npm run share` do this for you on every start. Never put a client secret in `config.js` by hand: the server sends that file to every visitor at `/config.js`, and the generated one only ever holds the client ID, the GitHub sign-in URL and the TURN details. Run it again after you change `.env`. It refuses to write when neither Google nor GitHub is set, so an existing `config.js` is never wiped. The generated file looks like this:
 
 ```js
 window.JMEET_CONFIG = {
@@ -236,13 +236,15 @@ STUN lets two browsers find a direct path. Between very different networks (mobi
 
 ## Usage
 
-### Start the server
+### Start the app
 
 ```bash
-bzg run
+npm run dev
 ```
 
-`bzg run` starts every script in `package.json` at once: Bonezegei (`start`), the gateway, `config` and `test`. Then open <http://localhost:8001>. Without GitHub keys in `.env`, the gateway still runs and only GitHub sign-in is off. If `localhost:8001` doesn't load, start the gateway on its own with `npm run gateway` in a second terminal.
+This refreshes `public/config.js` from `.env`, starts Bonezegei (8000) and the gateway (8001) in one terminal with each line labelled `[app]` or `[gateway]`, and prints `Open http://localhost:8001`. Ctrl+C stops both. Without GitHub keys in `.env`, only GitHub sign-in is off.
+
+`bzg run` still works too. It starts every script in `package.json` at once (`start`, `gateway`, `config` and `test`); `dev`, `share` and `tunnel` notice they were started by `bzg` and skip themselves, so `bzg run` never opens a public tunnel.
 
 Expected output:
 
@@ -266,19 +268,15 @@ HTTP server listening on port 8000 (High Concurrency Thread-Pool Active)
 
 A Cloudflare quick tunnel gives the app a public `https://….trycloudflare.com` address with a valid certificate. It's free and needs no account. The app stays on your PC, so it's only online while `bzg run` and the tunnel are running.
 
-Run each command in its own terminal, from the project root:
-
 ```bash
-bzg run
+npm run share
 ```
 
-```bash
-cloudflared tunnel --config NUL --url http://localhost:8001
-```
+This starts everything `npm run dev` does plus a Cloudflare quick tunnel to port 8001, and prints `Share this address: https://….trycloudflare.com` once cloudflared has one. If the app is already running from `npm run dev`, open a second terminal and use `npm run tunnel` for the tunnel alone.
 
-`--config NUL` stops cloudflared from loading `%USERPROFILE%\.cloudflared\config.yml`. A named tunnel's config there has a catch-all rule that answers every quick tunnel address with an empty 404. The "Configuration file NUL was empty" line it prints is harmless.
+Under the hood the tunnel runs `cloudflared tunnel --config NUL --url http://localhost:8001`. `--config NUL` stops cloudflared from loading `%USERPROFILE%\.cloudflared\config.yml`. A named tunnel's config there has a catch-all rule that answers every quick tunnel address with an empty 404. The "Configuration file NUL was empty" line it prints is harmless.
 
-1. Copy the `https://….trycloudflare.com` address that cloudflared prints. It can take up to a minute to start working.
+1. Copy the `https://….trycloudflare.com` address that `npm run share` prints. It can take up to a minute to start working.
 2. Add that address to the client's **Authorized JavaScript origins** (see [Creating the Google OAuth client ID](#creating-the-google-oauth-client-id)) and wait a few minutes.
 3. Share the address. Everyone who signs in must be a test user while the app is in Testing mode.
 
@@ -397,6 +395,8 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 │   ├── write-config.js      # npm run config: writes public/config.js from .env
 │   ├── write-config.test.js # Unit tests for the config writer
 │   ├── jmeet-core.test.js   # Unit tests for public/jmeet-core.js
+│   ├── run.js               # npm run dev / share / tunnel: starts and stops the pieces together
+│   ├── run.test.js          # Unit tests for the launcher
 ├── docs/
 │   └── state-machines.md    # Connection and sign-in state machines
 ├── package.json             # Project metadata, "http" dependency, start/test/auth scripts
@@ -431,13 +431,15 @@ ITE183_Lab3_Google OAuth and WebRTC (videocall)/
 | Command | What it does |
 |---|---|
 | `bzg install` | Installs the `http` dependency listed in `package.json` |
-| `bzg run` | Runs every `package.json` script at once: Bonezegei on 8000, the gateway on 8001, `config` and the tests |
+| `npm run dev` | Refreshes `config.js`, then starts Bonezegei (8000) and the gateway (8001) together. Open `http://localhost:8001` |
+| `npm run share` | Same as `dev`, plus a Cloudflare quick tunnel; prints the address to share |
+| `npm run tunnel` | Only the quick tunnel, for when the app is already running |
+| `bzg run` | Runs every `package.json` script at once: Bonezegei on 8000, the gateway on 8001, `config` and the tests (`dev`, `share` and `tunnel` skip themselves) |
 | `bonezegei app.bzg` | Runs only the server on port 8000 |
 | `bonezegei -v` | Prints the installed Bonezegei version |
 | `npm run config` | Writes `public/config.js` from `.env` |
 | `npm run gateway` | Starts only the gateway on port 8001 (reads `.env`) |
 | `npm test` | Checks the JSON and JavaScript syntax of the project files and runs every `node:test` suite in `scripts/` (also run by CI) |
-| `cloudflared tunnel --config NUL --url http://localhost:8001` | Opens a quick tunnel and prints the public address |
 
 <p align="right"><a href="#top">back to top</a></p>
 
@@ -503,7 +505,9 @@ Run these manual checks after `bzg run`:
 | No GitHub button | Set `GITHUB_CLIENT_ID` and `GITHUB_CALLBACK_URL` in `.env` and run `npm run config` |
 | `npm run config`: "Set GOOGLE_CLIENT_ID or the GitHub keys" | `.env` is missing or still has `YOUR_...` placeholders; `config.js` was left as it was |
 | Port 8000 already in use | Find the process with `Get-NetTCPConnection -LocalPort 8000` and stop it |
-| Tunnel page loads but says "Could not reach wss://…" | Point cloudflared at the gateway (`--url http://localhost:8001`) and make sure `bzg run` is running |
+| Tunnel page loads but says "Could not reach wss://…" | Use `npm run share`, or make sure the app is running (`npm run dev`) before `npm run tunnel` |
+| `[tunnel] cloudflared isn't installed or isn't on PATH` | Install it with `winget install Cloudflare.cloudflared` and open a new terminal |
+| `npm run dev` stops right away with "Port 8001 is already in use" | An old gateway, tunnel proxy or `bzg run` is still running. Stop it and try again |
 | Port 8001 already in use | An old gateway or tunnel proxy is still running. Find it with `Get-NetTCPConnection -LocalPort 8001` and stop it |
 | Every tunnel address returns an empty 404 | cloudflared is loading `%USERPROFILE%\.cloudflared\config.yml` and its ingress rules. Start the tunnel with `--config NUL` |
 | Tunnel address doesn't resolve right away | New addresses take up to a minute. If it still fails, your DNS may have cached the miss: run `ipconfig /flushdns` |

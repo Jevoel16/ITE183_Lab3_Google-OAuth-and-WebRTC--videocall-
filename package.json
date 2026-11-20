@@ -7,7 +7,10 @@
     "start": "bonezegei app.bzg",
     "test": "node scripts/check-syntax.js && node --test \"scripts/*.test.js\"",
     "config": "node --env-file-if-exists=.env scripts/write-config.js",
-    "gateway": "node --env-file-if-exists=.env scripts/gateway.js"
+    "gateway": "node --env-file-if-exists=.env scripts/gateway.js",
+    "dev": "node --env-file-if-exists=.env scripts/run.js dev",
+    "share": "node --env-file-if-exists=.env scripts/run.js share",
+    "tunnel": "node scripts/run.js tunnel"
   },
   "dependencies": {
     "http": "^1.0.0"
