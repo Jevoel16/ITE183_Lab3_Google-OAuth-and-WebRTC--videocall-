@@ -38,8 +38,12 @@ Jmeet is a Google Meet-style video call I built for ITE183 Laboratory 3. It adds
     <td width="50%" align="center"><b>Join screen (Dark)</b><br><a href="docs/images/join-dark.png"><img src="docs/images/join-dark.png" width="100%" alt="Join screen in the Dark theme"></a></td>
   </tr>
   <tr>
+    <td width="50%" align="center"><b>In a call</b><br><a href="docs/images/in-call.png"><img src="docs/images/in-call.png" width="100%" alt="Alice and Bob in a call with video tiles and the call bar"></a></td>
+    <td width="50%" align="center"><b>Chat (Alice)</b><br><a href="docs/images/chat.png"><img src="docs/images/chat.png" width="100%" alt="Alice's view of the in-call chat with Bob"></a></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><b>Chat (Bob)</b><br><a href="docs/images/chat-bob.png"><img src="docs/images/chat-bob.png" width="100%" alt="Bob's view of the same chat"></a></td>
     <td width="50%" align="center"><b>404 page</b><br><a href="docs/images/not-found.png"><img src="docs/images/not-found.png" width="100%" alt="Custom 404 page with a link back to Jmeet"></a></td>
-    <td width="50%"></td>
   </tr>
 </table>
 
