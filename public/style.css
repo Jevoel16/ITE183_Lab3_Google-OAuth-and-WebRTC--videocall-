@@ -1,8 +1,10 @@
 /* ==========================================================
-   Jmeet — Google Meet's color scheme, RGB-inverted
-   (every color below is #FFFFFF minus the original Meet color)
+   Jmeet — Light theme is Google Meet's color scheme, RGB-inverted
+   (every color below is #FFFFFF minus the original Meet color).
+   Dark theme is the original Meet palette, except the logo, which keeps its inverted colors.
    ========================================================== */
 :root {
+    color-scheme: light;
     --bg: #dfdedb;          /* Meet #202124 */
     --panel: #d2d1ce;       /* Meet #2d2e31 */
     --tile: #c3bfbc;        /* Meet #3c4043 */
@@ -31,17 +33,87 @@
     --logo-b: #15bcca;      /* #ea4335 */
     --logo-c: #0443fa;      /* #fbbc05 */
     --logo-d: #cb57ac;      /* #34a853 */
+
+    --label-shadow: rgba(255, 255, 255, .8);
+    --error: #8a1c12;
+}
+
+/* Original Meet colors: picked in the theme picker, or System on a dark device */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #202124;
+    --panel: #2d2e31;
+    --tile: #3c4043;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --accent: #8ab4f8;
+    --danger: #ea4335;
+    --btn: #3c4043;
+    --btn-hover: #4a4e51;
+    --border: #5f6368;
+    --video-bg: #000000;
+    --chat-bg: #ffffff;
+    --chat-text: #202124;
+    --chat-field: #f1f3f4;
+    --chat-muted: #5f6368;
+    --chat-link: #1a73e8;
+    --chat-disabled: #bdc1c6;
+    --toast-bg: #323232;
+    --toast-text: #ffffff;
+    --label-shadow: rgba(0, 0, 0, .6);
+    --error: #f28b82;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        color-scheme: dark;
+        --bg: #202124;
+        --panel: #2d2e31;
+        --tile: #3c4043;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --accent: #8ab4f8;
+        --danger: #ea4335;
+        --btn: #3c4043;
+        --btn-hover: #4a4e51;
+        --border: #5f6368;
+        --video-bg: #000000;
+        --chat-bg: #ffffff;
+        --chat-text: #202124;
+        --chat-field: #f1f3f4;
+        --chat-muted: #5f6368;
+        --chat-link: #1a73e8;
+        --chat-disabled: #bdc1c6;
+        --toast-bg: #323232;
+        --toast-text: #ffffff;
+        --label-shadow: rgba(0, 0, 0, .6);
+        --error: #f28b82;
+    }
 }
 * { box-sizing: border-box; }
-html, body {
+html { height: 100%; }
+body {
     margin: 0;
-    height: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
     background: var(--bg);
     color: var(--text);
     font-family: "Google Sans", "Segoe UI", Roboto, Arial, sans-serif;
 }
-button { font: inherit; }
+button, input { font: inherit; }
+h1 { text-wrap: balance; }
+p { text-wrap: pretty; }
 .hidden { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
 
 /* ---------- Brand ---------- */
 .brand {
@@ -63,7 +135,46 @@ button { font: inherit; }
     position: absolute;
     top: 0;
     left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 16px 24px;
+}
+
+/* ---------- Theme picker (System / Light / Dark) ---------- */
+.theme-picker {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 1px;
+}
+.theme-picker button {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 20px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.theme-picker button:hover { color: var(--text); }
+.theme-picker button[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+}
+.theme-picker svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .pill-btn {
@@ -80,10 +191,12 @@ button { font: inherit; }
 
 /* ---------- Join screen ---------- */
 #joinScreen {
-    height: 100%;
+    position: relative;
+    flex: 1 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
+    align-content: center;
     gap: 48px;
     padding: 72px 24px 24px;
     flex-wrap: wrap;
@@ -134,6 +247,37 @@ button { font: inherit; }
 #joinBox p { color: var(--muted); margin: 0; font-size: 14px; }
 #connStatus { font-size: 13px; }
 
+/* ---------- Room code ---------- */
+#roomBox { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+#roomBox label { font-size: 14px; font-weight: 500; }
+.room-row { display: flex; gap: 8px; }
+#roomInput {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 15px;
+}
+#roomInput[aria-invalid="true"] { border-color: var(--error); }
+#joinBox #roomError { color: var(--error); font-size: 13px; }
+.text-btn {
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.text-btn:hover { background: var(--btn); }
+
 /* ---------- Google sign-in ---------- */
 #authBox {
     display: flex;
@@ -142,6 +286,24 @@ button { font: inherit; }
     gap: 12px;
 }
 #googleBtn { min-height: 44px; display: flex; justify-content: center; }
+/* Sized like Google's large pill button so the two sit as a matching pair */
+.gh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 280px;
+    max-width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+}
+.gh-btn:hover { background: var(--btn); }
+.gh-btn svg { width: 20px; height: 20px; fill: currentColor; }
 #userChip {
     display: flex;
     align-items: center;
@@ -171,14 +333,15 @@ button { font: inherit; }
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    padding: 6px 8px;
-    border-radius: 16px;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 22px;
 }
 #signOutBtn:hover { background: var(--btn); }
 
 /* ---------- Call screen ---------- */
 #callScreen {
-    height: 100%;
+    height: 100dvh;
     display: grid;
     grid-template-rows: 1fr auto;
     grid-template-columns: 1fr auto;
@@ -249,7 +412,7 @@ button { font: inherit; }
     align-items: center;
     gap: 6px;
     font-size: 14px;
-    text-shadow: 0 1px 3px rgba(255,255,255,.8);
+    text-shadow: 0 1px 3px var(--label-shadow);
 }
 .tile .mic-off {
     display: none;
@@ -289,6 +452,9 @@ button { font: inherit; }
     font-size: 22px;
     cursor: pointer;
     color: var(--chat-muted);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
 }
 #chatNote {
     margin: 0 16px 8px;
@@ -308,7 +474,7 @@ button { font: inherit; }
 .msg .meta { font-size: 13px; font-weight: 600; }
 .msg .meta time { font-weight: 400; color: var(--chat-muted); margin-left: 8px; font-size: 12px; }
 .msg .text { font-size: 14px; margin-top: 2px; white-space: pre-wrap; word-wrap: break-word; }
-.msg.system { color: var(--chat-muted); font-size: 12px; font-style: italic; text-align: center; }
+.msg.system { color: var(--chat-muted); font-size: 12px; text-align: center; }
 #chatForm {
     display: flex;
     gap: 6px;
@@ -326,6 +492,7 @@ button { font: inherit; }
     outline: none;
     min-width: 0;
 }
+#chatForm:focus-within { outline: 2px solid var(--chat-link); }
 #chatSend {
     border: 0;
     background: transparent;
@@ -348,8 +515,10 @@ button { font: inherit; }
     padding: 12px 24px 18px;
     gap: 12px;
 }
-#roomInfo { font-size: 15px; white-space: nowrap; }
+#roomInfo { display: flex; align-items: center; gap: 8px; font-size: 15px; white-space: nowrap; }
 #roomInfo span { color: var(--muted); }
+#clock { font-variant-numeric: tabular-nums; }
+#roomCode { font-family: ui-monospace, Consolas, monospace; }
 #centerBtns, #rightBtns { display: flex; gap: 12px; align-items: center; }
 .ctrl {
     position: relative;
@@ -393,12 +562,23 @@ button { font: inherit; }
     opacity: 0;
     transition: opacity .2s;
     pointer-events: none;
+    z-index: 10;
 }
 #toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+
+/* Shown when the browser blocks call audio until the user taps */
+#audioUnlock {
+    position: fixed;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    z-index: 6;
+}
 
 /* ---------- Left-call screen & 404 ---------- */
 .center-screen {
-    height: 100%;
+    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -409,6 +589,21 @@ button { font: inherit; }
 }
 .center-screen h1 { font-weight: 400; margin: 0; }
 .center-screen p { color: var(--muted); margin: 0; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+    border-top: 1px solid var(--border);
+    padding: 0 24px;
+    font-size: 13px;
+    color: var(--muted);
+}
+.site-footer p { margin: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; }
+.site-footer a {
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+}
 
 @media (max-width: 800px) {
     #chatPanel {

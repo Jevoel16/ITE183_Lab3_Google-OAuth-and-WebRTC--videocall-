@@ -2,6 +2,38 @@ include("lib/http.bzg");
 
 var server = http(8000);
 
+// rooms[clientId] = the room code that client is in ("" = none yet).
+// Bonezegei arrays only take numeric indexes and error past the end,
+// so maxId tracks the highest index ever written.
+var rooms = [];
+var maxId = -1;
+
+// Room codes look like abc-defg-hij (12 characters, checked by the browser)
+var ROOM_PREFIX = "__room__:";
+var ROOM_CODE_LENGTH = 12;
+
+var setRoom = function (clientId, room) {
+    while (maxId < clientId) {
+        maxId = maxId + 1;
+        rooms[maxId] = "";
+    }
+    rooms[clientId] = room;
+};
+
+// Send to everyone in the same room as the sender, including the sender
+// (the browser drops its own echo).
+var sendToRoom = function (room, message) {
+    if (room == "") {
+        return 0;
+    }
+    for (var i = 0; i <= maxId; i = i + 1) {
+        if (rooms[i] == room) {
+            server.send(i, message);
+        }
+    }
+    return 0;
+};
+
 // ==============================
 // HTTP EVENT HANDLERS
 // ==============================
@@ -12,8 +44,10 @@ server.get = function (path, data) {
     } else if (path == "/style.css") {
         server.sendFile("public/style.css");
     } else if (path == "/config.js") {
-        // Google OAuth client ID used by the "Sign in with Google" button
+        // Google OAuth client ID and optional TURN servers
         server.sendFile("public/config.js");
+    } else if (path == "/jmeet-core.js") {
+        server.sendFile("public/jmeet-core.js");
     } else {
         server.sendFile("public/404.html");
     }
@@ -26,24 +60,44 @@ server.get = function (path, data) {
 // Triggered when a client successfully connects
 server.onConnect = function (clientId) {
     print("WebSocket connected! Client ID: " + clientId);
+    setRoom(clientId, "");
     // Tell the connecting client its ID (used by the browser for signaling)
     server.send(clientId, "__id__:" + clientId);
 };
 
 // Triggered when a client sends a message
 server.onData = function (message, clientId) {
-    print("Received from Client " + clientId + ": " + message);
+    // Heartbeat: keeps idle connections open through proxies like Cloudflare,
+    // which close a WebSocket after about 100 s without traffic.
+    if (message == "__ping__") {
+        server.send(clientId, "__pong__");
+        return 0;
+    }
 
-    // Relay the raw message (JSON for chat / WebRTC signaling) to all clients.
-    // Each browser ignores messages that are not addressed to it.
-    server.sendAll(message);
+    if (substr(message, 0, 9) == ROOM_PREFIX) {
+        var room = substr(message, 9, ROOM_CODE_LENGTH);
+        print("Client " + clientId + " entered room " + room);
+        setRoom(clientId, room);
+        return 0;
+    }
+
+    print("Received from Client " + clientId + ": " + message);
+    if (clientId <= maxId) {
+        // Chat and WebRTC signaling only reach the sender's room
+        sendToRoom(rooms[clientId], message);
+    }
+    return 0;
 };
 
 // Triggered when a client disconnects
 server.onDisconnect = function (clientId) {
     print("WebSocket disconnected! Client ID: " + clientId);
-    // Let the remaining clients remove this participant's video tile
-    server.sendAll("__left__:" + clientId);
+    if (clientId <= maxId) {
+        var room = rooms[clientId];
+        rooms[clientId] = "";
+        // Let the rest of the room remove this participant's video tile
+        sendToRoom(room, "__left__:" + clientId);
+    }
 };
 
 // Start the server instance

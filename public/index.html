@@ -4,16 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jmeet</title>
+    <!-- Applies the saved theme before first paint so there's no flash -->
+    <script>try { var t = localStorage.getItem("jmeet.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
     <link rel="stylesheet" href="/style.css">
-    <!-- Google OAuth client ID (copy public/config.example.js to public/config.js) -->
+    <!-- Google OAuth client ID, GitHub helper URL, TURN servers (copy public/config.example.js to public/config.js) -->
     <script src="/config.js"></script>
+    <script src="/jmeet-core.js"></script>
     <!-- Google Identity Services (Sign in with Google) -->
     <script id="gsiScript" src="https://accounts.google.com/gsi/client" async></script>
 </head>
 <body>
     <!-- ==================== JOIN SCREEN ==================== -->
-    <div id="joinScreen">
-        <div id="topBar"><span class="brand" id="brand"></span></div>
+    <main id="joinScreen">
+        <div id="topBar">
+            <span class="brand" id="brand"></span>
+            <div class="theme-picker" role="group" aria-label="Theme">
+                <button type="button" data-theme-choice="system" aria-label="System" title="System" aria-pressed="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+                </button>
+                <button type="button" data-theme-choice="light" aria-label="Light" title="Light" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                </button>
+                <button type="button" data-theme-choice="dark" aria-label="Dark" title="Dark" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+                </button>
+            </div>
+        </div>
         <div id="previewWrap">
             <video id="previewVideo" autoplay playsinline muted></video>
             <div id="previewMsg" class="hidden"></div>
@@ -24,10 +40,23 @@
         </div>
         <div id="joinBox">
             <h1>Ready to join?</h1>
-            <p id="connStatus">Connecting to server...</p>
+            <p id="connStatus" role="status">Connecting to server...</p>
+            <div id="roomBox">
+                <label for="roomInput">Room code</label>
+                <div class="room-row">
+                    <input type="text" id="roomInput" placeholder="abc-defg-hij" autocomplete="off"
+                           spellcheck="false" autocapitalize="none" maxlength="80" aria-invalid="false" />
+                    <button type="button" id="newRoomBtn" class="text-btn">New room</button>
+                </div>
+                <p id="roomError" class="hidden">Enter a room code like abc-defg-hij, or make a new room.</p>
+            </div>
             <div id="authBox">
-                <p id="authMsg">Sign in with your Google account to join.</p>
+                <p id="authMsg">Sign in with Google or GitHub to join.</p>
                 <div id="googleBtn"></div>
+                <a id="githubBtn" class="gh-btn hidden" href="#">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+                    Sign in with GitHub
+                </a>
                 <div id="userChip" class="hidden">
                     <img id="userPic" alt="" referrerpolicy="no-referrer" />
                     <div id="userText">
@@ -39,7 +68,10 @@
             </div>
             <button id="joinBtn" class="pill-btn" disabled>Join now</button>
         </div>
-    </div>
+    </main>
+    <footer class="site-footer" id="siteFooter">
+        <p><span>Built by <a href="https://github.com/Jevoel16">Sprucetrap</a>.</span> <a href="https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/blob/main/LICENSE">License</a></p>
+    </footer>
 
     <!-- ==================== CALL SCREEN ==================== -->
     <div id="callScreen" class="hidden">
@@ -52,10 +84,10 @@
                 <span>In-call messages</span>
                 <button id="chatClose" title="Close">&times;</button>
             </div>
-            <div id="chatNote">Messages can only be seen by people in the call and are deleted when the call ends.</div>
+            <div id="chatNote">Only people in this room see these messages, and they're gone when the call ends.</div>
             <div id="chatLog"></div>
             <form id="chatForm" autocomplete="off">
-                <input type="text" id="chatInput" placeholder="Send a message" maxlength="500" />
+                <input type="text" id="chatInput" placeholder="Send a message" aria-label="Message" maxlength="500" />
                 <button type="submit" id="chatSend" title="Send" disabled>
                     <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
                 </button>
@@ -63,7 +95,10 @@
         </aside>
 
         <div id="controls">
-            <div id="roomInfo"><b id="clock"></b> <span>| Jmeet</span></div>
+            <div id="roomInfo">
+                <b id="clock"></b> <span>|</span> <span id="roomCode"></span>
+                <button type="button" id="copyLinkBtn" class="text-btn">Copy link</button>
+            </div>
             <div id="centerBtns">
                 <button class="ctrl" id="micBtn" title="Turn off microphone"></button>
                 <button class="ctrl" id="camBtn" title="Turn off camera"></button>
@@ -76,7 +111,8 @@
         </div>
     </div>
 
-    <div id="toast"></div>
+    <button type="button" id="audioUnlock" class="pill-btn hidden">Tap to hear the call</button>
+    <div id="toast" role="status" aria-live="polite"></div>
 
     <script>
         // ==============================
@@ -97,15 +133,31 @@
         // ==============================
         // STATE
         // ==============================
+        const Core = window.JmeetCore;
+        const CONFIG = window.JMEET_CONFIG || {};
         const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + (location.host || "localhost:8000");
-        const RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+        // STUN finds a direct path; across different networks (mobile data vs
+        // home Wi-Fi) that path often fails or only works one way, so a TURN
+        // relay from config.js is used as the fallback.
+        const RTC_CONFIG = {
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+                .concat(Array.isArray(CONFIG.iceServers) ? CONFIG.iceServers : [])
+        };
+        const PING_MS = 25000;       // under Cloudflare's ~100 s idle limit
+        const PONG_TIMEOUT_MS = 60000;
 
         let socket = null;
+        let conn = Core.CONN.CONNECTING;
+        let reconnectAttempt = 0;
+        let pingTimer = null;
+        let lastPong = 0;
         let myId = null;
         let myName = "";
         let myPicture = "";
-        let user = null;          // signed-in Google profile { name, email, picture, exp }
+        let auth = { status: Core.AUTH.SIGNED_OUT }; // see docs/state-machines.md
+        let room = "";
         let inCall = false;
+        let signalQueue = Promise.resolve();
         let localStream = null;   // camera + mic
         let screenStream = null;  // screen share (when presenting)
         let audioOn = true;
@@ -222,10 +274,10 @@
             tile.querySelector(".avatar span").textContent = (name || "?").charAt(0);
         }
 
-        // Only Google profile photos are shown, so a peer can't inject arbitrary URLs
+        // Only Google and GitHub profile photos are shown, so a peer can't inject arbitrary URLs
         function setTilePicture(tile, picture) {
             const img = tile.querySelector(".avatar img");
-            if (isGooglePicture(picture)) img.src = picture;
+            if (Core.isAllowedPicture(picture)) img.src = picture;
             else img.removeAttribute("src");
         }
 
@@ -376,24 +428,56 @@
                 if (e.candidate) send({ type: "ice", to: id, candidate: e.candidate });
             };
 
+            // srcObject was set once above; resetting it per track restarts playback
             pc.ontrack = (e) => {
                 p.remoteStream.addTrack(e.track);
-                const v = p.tile.querySelector("video");
-                v.srcObject = p.remoteStream;
-                v.play().catch(() => {});
+                playRemote(p.tile.querySelector("video"));
             };
 
-            pc.onconnectionstatechange = () => {
-                if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-                    removePeer(id);
+            // One ICE restart before giving up: a network change or a NAT that
+            // dropped the path can often be fixed by gathering new candidates.
+            pc.oniceconnectionstatechange = () => {
+                if (pc.iceConnectionState !== "failed") return;
+                if (p.restarted) {
+                    toast("Couldn't connect to " + p.name + ". A TURN server may be needed.");
+                    return removePeer(id);
+                }
+                p.restarted = true;
+                if (p.isOfferer) {
+                    pc.restartIce();
+                    sendOffer(id, p).catch(err => console.error("ICE restart failed", err));
                 }
             };
 
             return p;
         }
 
-        // Attach our outgoing tracks (or recv-only slots if we have no device)
-        function addLocalTracks(pc, isOfferer) {
+        // Phones block audio that starts without a tap; offer a button instead of silence
+        function playRemote(video) {
+            video.play().catch(() => $("audioUnlock").classList.remove("hidden"));
+        }
+
+        function unlockAudio() {
+            $("audioUnlock").classList.add("hidden");
+            document.querySelectorAll(".tile:not(.self) video").forEach(playRemote);
+        }
+
+        // Closes a peer without telling the user (used for glare and reconnects)
+        function dropPeer(id) {
+            const p = peers[id];
+            if (!p || id === "self") return;
+            try { p.pc.close(); } catch (e) {}
+            p.tile.remove();
+            delete peers[id];
+            layoutGrid();
+        }
+
+        // Attach our outgoing tracks (or recv-only slots if we have no device).
+        // Runs once per connection: adding a track twice throws.
+        function addLocalTracks(p, isOfferer) {
+            if (p.tracksAdded) return;
+            p.tracksAdded = true;
+            const pc = p.pc;
             const videoTrack = screenStream
                 ? screenStream.getVideoTracks()[0]
                 : (localStream ? localStream.getVideoTracks()[0] : null);
@@ -414,11 +498,7 @@
             }
         }
 
-        // An existing participant calls the newcomer
-        async function callPeer(id, name, audio, video, picture) {
-            const p = getOrCreatePeer(id, name, picture);
-            setTileMedia(p.tile, audio, video);
-            addLocalTracks(p.pc, true);
+        async function sendOffer(id, p) {
             const offer = await p.pc.createOffer();
             await p.pc.setLocalDescription(offer);
             send({
@@ -427,11 +507,28 @@
             });
         }
 
+        // An existing participant calls the newcomer
+        async function callPeer(id, name, audio, video, picture) {
+            if (peers[id] && peers[id].pc) return; // already connected or connecting
+            const p = getOrCreatePeer(id, name, picture);
+            p.isOfferer = true;
+            setTileMedia(p.tile, audio, video);
+            addLocalTracks(p, true);
+            await sendOffer(id, p);
+        }
+
         async function handleOffer(msg) {
+            const existing = peers[msg.from];
+            // Glare: both sides sent an offer at once. The lower ID keeps its
+            // offer; the higher ID drops its own and answers instead.
+            if (existing && existing.pc && existing.pc.signalingState === "have-local-offer") {
+                if (Number(myId) < Number(msg.from)) return;
+                dropPeer(msg.from);
+            }
             const p = getOrCreatePeer(msg.from, msg.name, msg.picture);
             setTileMedia(p.tile, msg.audio, msg.video);
             await p.pc.setRemoteDescription(msg.sdp);
-            addLocalTracks(p.pc, false);
+            addLocalTracks(p, false);
             await flushIce(p);
             const answer = await p.pc.createAnswer();
             await p.pc.setLocalDescription(answer);
@@ -546,20 +643,75 @@
         // ==============================
         // WEBSOCKET
         // ==============================
+        // Every change to the connection status goes through here (see docs/state-machines.md)
+        function setConn(event) {
+            conn = Core.connTransition(conn, event);
+            renderConn();
+        }
+
+        function renderConn() {
+            const text = {
+                [Core.CONN.CONNECTING]: "Connecting to server...",
+                [Core.CONN.OPEN]: "Connected to " + wsUrl,
+                [Core.CONN.RECONNECTING]: "Connection lost. Reconnecting...",
+                [Core.CONN.CLOSED]: "Disconnected from server"
+            }[conn];
+            $("connStatus").textContent = text;
+            updateJoinButton();
+        }
+
+        function startHeartbeat() {
+            lastPong = Date.now();
+            clearInterval(pingTimer);
+            pingTimer = setInterval(() => {
+                // No pong for a minute: the socket is dead even if the browser hasn't noticed
+                if (Date.now() - lastPong > PONG_TIMEOUT_MS) return handleLost();
+                if (socket && socket.readyState === WebSocket.OPEN) socket.send("__ping__");
+            }, PING_MS);
+        }
+
+        // The server forgot us, so drop every peer; they'll reconnect when we re-join
+        function handleLost() {
+            clearInterval(pingTimer);
+            if (socket) {
+                socket.onclose = socket.onmessage = socket.onerror = null;
+                try { socket.close(); } catch (e) {}
+            }
+            myId = null;
+            $("chatSend").disabled = true;
+            if (conn === Core.CONN.CLOSED) return;
+            if (conn !== Core.CONN.RECONNECTING) {
+                setConn("lost");
+                if (inCall) {
+                    Object.keys(peers).forEach(dropPeer);
+                    toast("Connection lost. Reconnecting...");
+                }
+            }
+            setTimeout(connect, Core.reconnectDelay(reconnectAttempt++));
+        }
+
         function connect() {
+            if (conn === Core.CONN.CLOSED) return;
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
-                $("connStatus").textContent = "Connected to " + wsUrl;
+                reconnectAttempt = 0;
+                setConn("opened");
+                startHeartbeat();
             };
 
             socket.onmessage = (event) => {
                 const data = String(event.data);
 
                 // Plain-text control messages from app.bzg
+                if (data === "__pong__") {
+                    lastPong = Date.now();
+                    return;
+                }
                 if (data.startsWith("__id__:")) {
                     myId = data.slice(7).trim();
                     updateJoinButton();
+                    if (inCall) enterRoom(); // reconnected mid-call: re-join with the new ID
                     return;
                 }
                 if (data.startsWith("__left__:")) {
@@ -579,20 +731,22 @@
                     if (!msg) return;
                 }
 
-                handleMessage(msg).catch(err => console.error("Signaling error", err));
+                // One message at a time, so an offer, its answer and ICE for the
+                // same peer never run interleaved
+                signalQueue = signalQueue
+                    .then(() => handleMessage(msg))
+                    .catch(err => console.error("Signaling error", err));
             };
 
-            socket.onclose = () => {
-                $("connStatus").textContent = "Disconnected from server";
-                myId = null;
-                updateJoinButton();
-                $("chatSend").disabled = true;
-                if (inCall) toast("Lost connection to the server");
-            };
+            socket.onclose = handleLost;
+        }
 
-            socket.onerror = () => {
-                $("connStatus").textContent = "Could not reach " + wsUrl;
-            };
+        // Tell the server our room, then announce ourselves to it
+        function enterRoom() {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+            socket.send("__room__:" + room);
+            send({ type: "join", name: myName, picture: myPicture, audio: audioOn, video: videoOn || !!screenStream });
+            $("chatSend").disabled = $("chatInput").value.trim().length === 0;
         }
 
         async function handleMessage(msg) {
@@ -627,14 +781,12 @@
         // ==============================
         // GOOGLE SIGN-IN (OAuth 2.0 / OpenID Connect via Google Identity Services)
         // ==============================
-        const CLIENT_ID = (window.JMEET_CONFIG && window.JMEET_CONFIG.googleClientId) || "";
+        const CLIENT_ID = CONFIG.googleClientId || "";
+        const GITHUB_AUTH_URL = CONFIG.githubAuthUrl || "";
         const SESSION_KEY = "jmeet.user";
         const GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"];
-
-        function isGooglePicture(url) {
-            try { return new URL(url).hostname.endsWith(".googleusercontent.com"); }
-            catch (e) { return false; }
-        }
+        const googleConfigured = () => !!CLIENT_ID && !CLIENT_ID.startsWith("YOUR_");
+        const currentUser = () => auth.status === Core.AUTH.SIGNED_IN ? auth.user : null;
 
         // Decodes the payload of a Google ID token (a JWT: header.payload.signature)
         function decodeJwt(token) {
@@ -658,10 +810,12 @@
             try {
                 const claims = decodeJwt(response.credential);
                 validateClaims(claims);
+                if (currentUser()) setUser(null);
                 setUser({
+                    provider: "google",
                     name: claims.name || claims.email,
                     email: claims.email || "",
-                    picture: isGooglePicture(claims.picture) ? claims.picture : "",
+                    picture: Core.isAllowedPicture(claims.picture) ? claims.picture : "",
                     exp: claims.exp
                 });
                 toast("Signed in as " + (claims.name || claims.email));
@@ -671,10 +825,11 @@
             }
         }
 
+        // Signing in or out always goes through Core.authTransition
         function setUser(profile) {
-            user = profile;
+            auth = Core.authTransition(auth, profile ? { type: "signIn", user: profile } : { type: "signOut" });
             try {
-                if (user) sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+                if (profile) sessionStorage.setItem(SESSION_KEY, JSON.stringify(profile));
                 else sessionStorage.removeItem(SESSION_KEY);
             } catch (e) { /* storage blocked: stay signed in for this page only */ }
             renderAuth();
@@ -683,43 +838,72 @@
         function restoreUser() {
             try {
                 const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
-                if (saved && saved.name && saved.exp * 1000 > Date.now()) user = saved;
+                if (Core.isValidUser(saved)) auth = { status: Core.AUTH.SIGNED_IN, user: saved };
                 else sessionStorage.removeItem(SESSION_KEY);
-            } catch (e) { user = null; }
+            } catch (e) { /* bad saved value: stay signed out */ }
+        }
+
+        // The GitHub helper (scripts/github-auth.js) sends the profile back in the URL hash
+        function readGitHubRedirect() {
+            const hash = location.hash;
+            if (!/[#&]auth(_error)?=/.test(hash)) return;
+            const result = Core.parseAuthFragment(hash);
+            if (result) {
+                if (currentUser()) setUser(null);
+                setUser(result.user);
+                if (result.room) room = result.room;
+                toast("Signed in as " + result.user.name);
+            } else {
+                const params = new URLSearchParams(hash.slice(1));
+                room = Core.roomFromHash(params.get("room")) || room;
+                $("authMsg").textContent = params.get("auth_error") === "denied"
+                    ? "GitHub sign-in was cancelled."
+                    : "GitHub sign-in failed. Please try again.";
+            }
+            history.replaceState(null, "", location.pathname + (room ? "#" + room : ""));
         }
 
         function signOut() {
-            if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+            const user = currentUser();
+            if (!user) return;
+            if (user.provider === "google" && window.google && google.accounts) google.accounts.id.disableAutoSelect();
             setUser(null);
         }
 
         function renderAuth() {
-            const signedIn = !!user;
-            $("userChip").classList.toggle("hidden", !signedIn);
-            $("googleBtn").classList.toggle("hidden", signedIn);
-            if (signedIn) {
+            const user = currentUser();
+            $("userChip").classList.toggle("hidden", !user);
+            $("googleBtn").classList.toggle("hidden", !!user);
+            $("githubBtn").classList.toggle("hidden", !!user || !GITHUB_AUTH_URL);
+            if (user) {
                 $("userName").textContent = user.name;
                 $("userEmail").textContent = user.email;
                 if (user.picture) $("userPic").src = user.picture;
                 else $("userPic").removeAttribute("src");
-                $("authMsg").textContent = "Signed in with Google";
-            } else if (CLIENT_ID && !CLIENT_ID.startsWith("YOUR_")) {
-                $("authMsg").textContent = "Sign in with your Google account to join.";
+                $("authMsg").textContent = "Signed in with " + (user.provider === "github" ? "GitHub" : "Google");
+            } else if (googleConfigured() || GITHUB_AUTH_URL) {
+                const names = [googleConfigured() && "Google", GITHUB_AUTH_URL && "GitHub"].filter(Boolean);
+                $("authMsg").textContent = "Sign in with " + names.join(" or ") + " to join.";
+            } else {
+                $("authMsg").textContent = "Sign-in is not configured. Copy public/config.example.js to " +
+                    "public/config.js and add your Google client ID or GitHub helper URL.";
             }
             updateJoinButton();
         }
 
         function updateJoinButton() {
-            $("joinBtn").disabled = !(user && myId);
+            $("joinBtn").disabled = !(currentUser() && myId && conn === Core.CONN.OPEN);
+        }
+
+        // The room goes along so the helper can send people back to it
+        function startGitHubSignIn(e) {
+            e.preventDefault();
+            const code = Core.normalizeRoomInput($("roomInput").value);
+            location.href = GITHUB_AUTH_URL + (code ? "?room=" + encodeURIComponent(code) : "");
         }
 
         function initGoogleSignIn() {
-            if (!CLIENT_ID || CLIENT_ID.startsWith("YOUR_")) {
-                if (!user) $("authMsg").textContent =
-                    "Google sign-in is not configured. Copy public/config.example.js to " +
-                    "public/config.js and add your OAuth client ID.";
-                return;
-            }
+            if (!googleConfigured()) return;
             google.accounts.id.initialize({
                 client_id: CLIENT_ID,
                 callback: handleCredential,
@@ -769,18 +953,58 @@
             msg.classList.toggle("hidden", !text);
         }
 
+        // ==============================
+        // ROOMS
+        // ==============================
+        const randomInt = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n;
+
+        function showRoomError(show) {
+            const input = $("roomInput");
+            $("roomError").classList.toggle("hidden", !show);
+            input.setAttribute("aria-invalid", show ? "true" : "false");
+            // Only point at the error while it's shown, so it isn't read out early
+            if (show) input.setAttribute("aria-describedby", "roomError");
+            else input.removeAttribute("aria-describedby");
+        }
+
+        function newRoom() {
+            $("roomInput").value = Core.makeRoomCode(randomInt);
+            showRoomError(false);
+        }
+
+        async function copyRoomLink() {
+            const link = location.origin + location.pathname + "#" + room;
+            try {
+                await navigator.clipboard.writeText(link);
+                toast("Link copied");
+            } catch (e) {
+                toast("Copy failed. Share this link: " + link);
+            }
+        }
+
         function joinCall() {
-            if (!user || !myId) return;
+            const user = currentUser();
+            if (inCall || !user || !myId) return;
+            const code = Core.normalizeRoomInput($("roomInput").value);
+            if (!code) {
+                showRoomError(true);
+                return $("roomInput").focus();
+            }
             if (user.exp * 1000 <= Date.now()) {
                 signOut();
-                return toast("Your Google session expired. Please sign in again.");
+                return toast("Your sign-in expired. Please sign in again.");
             }
+            room = code;
+            history.replaceState(null, "", location.pathname + "#" + room);
             myName = user.name;
             myPicture = user.picture;
             inCall = true;
 
             $("joinScreen").classList.add("hidden");
+            $("siteFooter").classList.add("hidden");
             $("callScreen").classList.remove("hidden");
+            $("roomCode").textContent = room;
+            document.title = room + " | Jmeet";
 
             // Our own tile
             const selfTile = createTile("self", myName, true, myPicture);
@@ -790,23 +1014,58 @@
             updateControlButtons();
             $("chatSend").disabled = true;
 
-            addSystemMessage("You joined the call");
-            send({ type: "join", name: myName, picture: myPicture, audio: audioOn, video: videoOn });
+            addSystemMessage("You joined " + room);
+            enterRoom();
         }
 
         function leaveCall() {
             send({ type: "leave" });
             inCall = false;
+            setConn("close");
+            clearInterval(pingTimer);
             Object.keys(peers).forEach(id => { if (id !== "self") removePeer(id); });
             if (screenStream) screenStream.getTracks().forEach(t => t.stop());
             if (localStream) localStream.getTracks().forEach(t => t.stop());
-            if (socket) socket.close();
+            if (socket) { socket.onclose = null; socket.close(); }
+            const footer = $("siteFooter");
+            footer.classList.remove("hidden");
+            document.title = "You left | Jmeet";
+            // Reload keeps the #room hash, so Rejoin lands back in the same room
             document.body.innerHTML =
-                '<div class="center-screen">' +
+                '<main class="center-screen">' +
                 '<span class="brand">' + ICONS.logo + '<b>Jmeet</b></span>' +
                 '<h1>You left the meeting</h1>' +
-                '<button class="pill-btn" onclick="location.reload()">Rejoin</button>' +
-                '</div>';
+                '<button class="pill-btn" type="button" onclick="location.reload()">Rejoin</button>' +
+                '</main>';
+            document.body.appendChild(footer);
+        }
+
+        // ==============================
+        // THEME (System / Light / Dark)
+        // ==============================
+        const THEME_KEY = "jmeet.theme";
+
+        function applyTheme(choice) {
+            const theme = Core.parseTheme(choice);
+            if (theme === "system") delete document.documentElement.dataset.theme;
+            else document.documentElement.dataset.theme = theme;
+            try {
+                if (theme === "system") localStorage.removeItem(THEME_KEY);
+                else localStorage.setItem(THEME_KEY, theme);
+            } catch (e) { /* storage blocked: the theme still applies to this page */ }
+            document.querySelectorAll("[data-theme-choice]").forEach(btn =>
+                btn.setAttribute("aria-pressed", String(btn.dataset.themeChoice === theme)));
+        }
+
+        function initTheme() {
+            let saved = null;
+            try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+            document.querySelectorAll("[data-theme-choice]").forEach(btn => {
+                btn.setAttribute("aria-pressed", String(btn.dataset.themeChoice === Core.parseTheme(saved)));
+                btn.addEventListener("click", () => applyTheme(btn.dataset.themeChoice));
+            });
+            // Another tab changed the theme
+            window.addEventListener("storage", (e) => { if (e.key === THEME_KEY) applyTheme(e.newValue); });
         }
 
         // ==============================
@@ -814,6 +1073,15 @@
         // ==============================
         $("joinBtn").addEventListener("click", joinCall);
         $("signOutBtn").addEventListener("click", signOut);
+        $("githubBtn").addEventListener("click", startGitHubSignIn);
+        $("newRoomBtn").addEventListener("click", newRoom);
+        $("copyLinkBtn").addEventListener("click", copyRoomLink);
+        $("audioUnlock").addEventListener("click", unlockAudio);
+        $("roomInput").addEventListener("input", () => {
+            if ($("roomInput").getAttribute("aria-invalid") === "true" &&
+                Core.normalizeRoomInput($("roomInput").value)) showRoomError(false);
+        });
+        $("roomInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("joinBtn").disabled) joinCall(); });
         $("micBtn").addEventListener("click", toggleMic);
         $("camBtn").addEventListener("click", toggleCam);
         $("previewMicBtn").addEventListener("click", toggleMic);
@@ -836,7 +1104,11 @@
         updateClock();
         setInterval(updateClock, 15000);
 
+        initTheme();
+        room = Core.roomFromHash(location.hash);
         restoreUser();
+        readGitHubRedirect();
+        $("roomInput").value = room;
         renderAuth();
         loadGoogleSignIn();
         initPreview();
