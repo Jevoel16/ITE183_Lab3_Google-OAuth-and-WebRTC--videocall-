@@ -7,3 +7,8 @@ CLAUDE.md
 
 # Local Google OAuth client ID (copy public/config.example.js)
 public/config.js
+
+# Local secrets (GitHub OAuth client secret)
+.env
+.env.*
+!.env.example

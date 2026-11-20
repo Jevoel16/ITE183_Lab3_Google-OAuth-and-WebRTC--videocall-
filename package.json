@@ -5,7 +5,8 @@
   "main": "app.bzg",
   "scripts": {
     "start": "bonezegei app.bzg",
-    "test": "node scripts/check-syntax.js && node --test scripts/tunnel-proxy.test.js"
+    "test": "node scripts/check-syntax.js && node --test \"scripts/*.test.js\"",
+    "auth": "node --env-file-if-exists=.env scripts/github-auth.js"
   },
   "dependencies": {
     "http": "^1.0.0"
