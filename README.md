@@ -113,8 +113,6 @@ Every key goes in `.env`; [`.env.example`](.env.example) lists them with placeho
 | `GOOGLE_CLIENT_SECRET` | Nothing yet; the Google popup doesn't need it |
 | `GITHUB_CLIENT_ID` | Gateway; also shows the GitHub button |
 | `GITHUB_CLIENT_SECRET` | Gateway only, never sent to the browser |
-| `APP_URL` | Gateway: where GitHub sign-in sends people back |
-| `GITHUB_CALLBACK_URL` | Gateway; must match the callback URL on GitHub |
 | `TURN_URLS` | Browser, comma-separated TURN URLs |
 | `TURN_USERNAME` / `TURN_CREDENTIAL` | Browser (TURN relay) |
 

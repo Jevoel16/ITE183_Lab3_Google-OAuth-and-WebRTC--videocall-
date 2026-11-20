@@ -13,9 +13,9 @@ Every request goes through the gateway on 8001. It forwards pages, files and the
 
 GitHub's authorization-code flow needs the client secret, so its routes live in `scripts/github-auth.js` and run inside the gateway.
 
-1. Sign in with GitHub opens `http://localhost:8001/auth/github?room=<code>`. The gateway saves a random `state` for 10 minutes and redirects to GitHub.
+1. Sign in with GitHub opens `/auth/github?room=<code>` on the address the page is on. The gateway reads that address from the `Host` header (only `localhost`, `127.0.0.1` or `*.trycloudflare.com`), saves it with a random `state` for 10 minutes and redirects to GitHub with the callback on the same address.
 2. GitHub sends the user back to `/auth/github/callback` with a `code`. The gateway checks the `state`, swaps the code for a token, reads `api.github.com/user` and drops the token.
-3. The gateway redirects to `APP_URL#auth=<profile>&room=<code>`. The page reads the profile (name, email, avatar, 8-hour expiry), clears the hash and keeps the room.
+3. The gateway redirects to `<same address>/#auth=<profile>&room=<code>`. The page reads the profile (name, email, avatar, 8-hour expiry), clears the hash and keeps the room.
 
 ## Security note
 

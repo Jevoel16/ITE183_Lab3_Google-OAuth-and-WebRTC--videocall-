@@ -11,11 +11,12 @@
 | "Sign-in failed: Token was issued for a different app" | The client ID in `config.js` doesn't match the one the token was issued for |
 | Google button doesn't appear | Check your internet connection, and turn off ad or tracker blockers for `accounts.google.com` |
 | Sign-in fails on `http://127.0.0.1:8001` or a LAN IP | Use `http://localhost:8001`. Google only allows the origins you registered, and browsers block the camera on plain HTTP except on localhost |
-| No GitHub button | Set `GITHUB_CLIENT_ID` and `GITHUB_CALLBACK_URL` in `.env` and run `npm run config` |
+| No GitHub button | Set `GITHUB_CLIENT_ID` in `.env` and run `npm run config` |
 | "GitHub sign-in isn't set up" | Add the GitHub keys to `.env` and restart `npm run dev` |
 | GitHub sign-in: "Missing in .env: ..." | Copy the Local block of `.env.example` into `.env` and fill in the GitHub keys |
-| GitHub sign-in: `redirect_uri` mismatch | The callback URL on GitHub must be exactly `GITHUB_CALLBACK_URL` |
-| GitHub sign-in from `localhost:8000` fails or lands on 8001 | The button points at the gateway, and GitHub returns you to `APP_URL` (8001). Use `http://localhost:8001` for GitHub sign-in |
+| GitHub sign-in: `redirect_uri` mismatch | The callback URL on GitHub doesn't match the address you opened. Use `http://localhost:8001/auth/github/callback` locally and `https://trycloudflare.com/auth/github/callback` while sharing |
+| GitHub sign-in from `localhost:8000` shows a 404 | The sign-in routes live on the gateway. Use `http://localhost:8001` |
+| GitHub sign-in: "Open Jmeet on http://localhost:8001 or its trycloudflare.com address" | The gateway only sends GitHub back to localhost or a quick tunnel, so a LAN IP or other hostname is refused |
 | `npm run config`: "Set GOOGLE_CLIENT_ID or the GitHub keys" | `.env` is missing or still has `YOUR_...` placeholders; `config.js` was left as it was |
 
 ## Calls

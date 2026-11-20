@@ -4,7 +4,7 @@ const vm = require("node:vm");
 const { buildConfig, renderConfigJs } = require("./write-config.js");
 
 const GOOGLE = { GOOGLE_CLIENT_ID: "123-abc.apps.googleusercontent.com" };
-const GITHUB = { GITHUB_CLIENT_ID: "Ov23li", GITHUB_CALLBACK_URL: "http://localhost:8001/auth/github/callback" };
+const GITHUB = { GITHUB_CLIENT_ID: "Ov23li" };
 
 test("buildConfig reads Google, GitHub and TURN keys", () => {
     const config = buildConfig({
@@ -14,15 +14,14 @@ test("buildConfig reads Google, GitHub and TURN keys", () => {
     });
     assert.deepEqual(config, {
         googleClientId: "123-abc.apps.googleusercontent.com",
-        githubAuthUrl: "http://localhost:8001/auth/github",
+        githubAuthUrl: "/auth/github",
         iceServers: [{ urls: ["turn:relay.example:3478", "turns:relay.example:443?transport=tcp"],
                        username: "user", credential: "pass" }]
     });
 });
 
 test("buildConfig leaves out providers that still have placeholders", () => {
-    const config = buildConfig({ ...GOOGLE, GITHUB_CLIENT_ID: "YOUR_GITHUB_CLIENT_ID",
-        GITHUB_CALLBACK_URL: GITHUB.GITHUB_CALLBACK_URL, TURN_URLS: "YOUR_TURN_URLS" });
+    const config = buildConfig({ ...GOOGLE, GITHUB_CLIENT_ID: "YOUR_GITHUB_CLIENT_ID", TURN_URLS: "YOUR_TURN_URLS" });
     assert.equal(config.githubAuthUrl, "");
     assert.deepEqual(config.iceServers, []);
     assert.equal(buildConfig(GITHUB).googleClientId, "");

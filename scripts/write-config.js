@@ -11,10 +11,8 @@ const isSet = (value) => !!value && !value.startsWith("YOUR_");
 // Turns .env values into the object the page reads as window.JMEET_CONFIG
 function buildConfig(env) {
     const googleClientId = isSet(env.GOOGLE_CLIENT_ID) ? env.GOOGLE_CLIENT_ID : "";
-    // The sign-in route lives next to the callback on the gateway
-    const githubAuthUrl = isSet(env.GITHUB_CLIENT_ID) && isSet(env.GITHUB_CALLBACK_URL)
-        ? new URL("/auth/github", env.GITHUB_CALLBACK_URL).toString()
-        : "";
+    // Relative, so the button stays on whichever address the page was opened on
+    const githubAuthUrl = isSet(env.GITHUB_CLIENT_ID) ? "/auth/github" : "";
     if (!googleClientId && !githubAuthUrl) {
         throw new Error("Set GOOGLE_CLIENT_ID or the GitHub keys in .env (see .env.example). config.js was not changed.");
     }

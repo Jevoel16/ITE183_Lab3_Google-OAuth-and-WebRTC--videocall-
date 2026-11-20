@@ -67,7 +67,7 @@ New origins can take a few minutes to start working.
 3. Copy the Client ID, click Generate a new client secret, and put both in `.env`.
 4. Restart `npm run dev`. It rewrites `config.js`, which shows the GitHub button, and the gateway picks up the keys.
 
-GitHub allows one callback URL per OAuth app, and quick-tunnel addresses change on every run, so GitHub sign-in works on localhost only for now. With a fixed tunnel hostname, fill in the Development block of `.env.example` and register that hostname's callback URL on GitHub.
+The gateway sends GitHub a callback on whatever address you opened (`localhost:8001` or the `trycloudflare.com` one) and brings you back there. GitHub allows one callback URL per OAuth app, but it accepts any subdomain of the one you register. So while you share the app, change the callback URL on GitHub to `https://trycloudflare.com/auth/github/callback`; that matches every quick-tunnel address. Change it back to `http://localhost:8001/auth/github/callback` for local sign-in.
 
 ## TURN server
 

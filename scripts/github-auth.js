@@ -7,7 +7,8 @@ const { isRoomCode } = require("../public/jmeet-core.js");
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 const SESSION_SECONDS = 8 * 60 * 60;
-const REQUIRED_KEYS = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "APP_URL", "GITHUB_CALLBACK_URL"];
+const REQUIRED_KEYS = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"];
+const CALLBACK_PATH = "/auth/github/callback";
 const isSet = (value) => !!value && !value.startsWith("YOUR_");
 
 // null when GitHub isn't set up at all (Google-only is fine); fails fast,
@@ -16,21 +17,23 @@ function loadConfig(env) {
     if (!isSet(env.GITHUB_CLIENT_ID) && !isSet(env.GITHUB_CLIENT_SECRET)) return null;
     const missing = REQUIRED_KEYS.filter((key) => !isSet(env[key]));
     if (missing.length) throw new Error(`Missing in .env: ${missing.join(", ")} (see .env.example)`);
-    for (const key of ["APP_URL", "GITHUB_CALLBACK_URL"]) {
-        try { new URL(env[key]); } catch (e) { throw new Error(`${key} is not a valid URL: ${env[key]}`); }
-    }
-    return {
-        clientId: env.GITHUB_CLIENT_ID,
-        clientSecret: env.GITHUB_CLIENT_SECRET,
-        appUrl: env.APP_URL.replace(/\/+$/, "") + "/",
-        callbackUrl: env.GITHUB_CALLBACK_URL
-    };
+    return { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET };
 }
 
-function buildAuthorizeUrl(config, state) {
+// The address the visitor opened (localhost or a quick tunnel), so GitHub
+// sends them back there. Other Host values get null: the Host header is
+// client-controlled, and trusting it would make this an open redirect.
+function requestOrigin(req) {
+    const host = String((req.headers && req.headers.host) || "").toLowerCase();
+    if (/^(localhost|127\.0\.0\.1)(:\d{1,5})?$/.test(host)) return `http://${host}`;
+    if (/^[a-z0-9-]+\.trycloudflare\.com$/.test(host)) return `https://${host}`;
+    return null;
+}
+
+function buildAuthorizeUrl(config, state, origin) {
     const url = new URL("https://github.com/login/oauth/authorize");
     url.searchParams.set("client_id", config.clientId);
-    url.searchParams.set("redirect_uri", config.callbackUrl);
+    url.searchParams.set("redirect_uri", origin + CALLBACK_PATH);
     url.searchParams.set("scope", "read:user");
     url.searchParams.set("state", state);
     url.searchParams.set("allow_signup", "true");
@@ -41,9 +44,9 @@ function buildAuthorizeUrl(config, state) {
 function createStateStore(now = Date.now) {
     const pending = new Map();
     return {
-        issue(room) {
+        issue(room, origin) {
             const state = crypto.randomBytes(16).toString("hex");
-            pending.set(state, { room: isRoomCode(room) ? room : "", expires: now() + STATE_TTL_MS });
+            pending.set(state, { room: isRoomCode(room) ? room : "", origin, expires: now() + STATE_TTL_MS });
             return state;
         },
         // Each state works once
@@ -66,16 +69,16 @@ function profileFromGitHubUser(ghUser, nowMs) {
     };
 }
 
-function appRedirect(appUrl, profile, room) {
+function appRedirect(origin, profile, room) {
     const auth = Buffer.from(JSON.stringify(profile)).toString("base64url");
-    return `${appUrl}#auth=${auth}&room=${room || ""}`;
+    return `${origin}/#auth=${auth}&room=${room || ""}`;
 }
 
-function errorRedirect(appUrl, reason, room) {
-    return `${appUrl}#auth_error=${encodeURIComponent(reason)}&room=${room || ""}`;
+function errorRedirect(origin, reason, room) {
+    return `${origin}/#auth_error=${encodeURIComponent(reason)}&room=${room || ""}`;
 }
 
-async function exchangeCode(config, code) {
+async function exchangeCode(config, code, callbackUrl) {
     const res = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
@@ -83,7 +86,7 @@ async function exchangeCode(config, code) {
             client_id: config.clientId,
             client_secret: config.clientSecret,
             code,
-            redirect_uri: config.callbackUrl
+            redirect_uri: callbackUrl
         })
     });
     const body = await res.json();
@@ -115,21 +118,27 @@ function createHandler(config, store, deps = { exchangeCode, fetchGitHubUser }) 
             res.writeHead(405, { Allow: "GET" });
             return res.end();
         }
-        if (url.pathname === "/auth/github") {
-            return redirect(res, buildAuthorizeUrl(config, store.issue(url.searchParams.get("room"))));
+        const origin = requestOrigin(req);
+        if (!origin) {
+            res.writeHead(400, { "Content-Type": "text/plain" });
+            return res.end("Open Jmeet on http://localhost:8001 or its trycloudflare.com address to sign in with GitHub.");
         }
-        if (url.pathname === "/auth/github/callback") {
+        if (url.pathname === "/auth/github") {
+            const state = store.issue(url.searchParams.get("room"), origin);
+            return redirect(res, buildAuthorizeUrl(config, state, origin));
+        }
+        if (url.pathname === CALLBACK_PATH) {
             const entry = store.take(url.searchParams.get("state") || "");
-            if (!entry) return redirect(res, errorRedirect(config.appUrl, "expired", ""));
+            if (!entry) return redirect(res, errorRedirect(origin, "expired", ""));
             // The user pressed Cancel on GitHub's consent screen
-            if (url.searchParams.get("error")) return redirect(res, errorRedirect(config.appUrl, "denied", entry.room));
+            if (url.searchParams.get("error")) return redirect(res, errorRedirect(entry.origin, "denied", entry.room));
             try {
-                const token = await deps.exchangeCode(config, url.searchParams.get("code") || "");
+                const token = await deps.exchangeCode(config, url.searchParams.get("code") || "", entry.origin + CALLBACK_PATH);
                 const ghUser = await deps.fetchGitHubUser(token);
-                return redirect(res, appRedirect(config.appUrl, profileFromGitHubUser(ghUser, Date.now()), entry.room));
+                return redirect(res, appRedirect(entry.origin, profileFromGitHubUser(ghUser, Date.now()), entry.room));
             } catch (err) {
                 console.error("GitHub sign-in failed:", err.message);
-                return redirect(res, errorRedirect(config.appUrl, "failed", entry.room));
+                return redirect(res, errorRedirect(entry.origin, "failed", entry.room));
             }
         }
         res.writeHead(404, { "Content-Type": "text/plain" });
@@ -138,6 +147,6 @@ function createHandler(config, store, deps = { exchangeCode, fetchGitHubUser }) 
 }
 
 module.exports = {
-    loadConfig, buildAuthorizeUrl, createStateStore, profileFromGitHubUser,
+    loadConfig, requestOrigin, buildAuthorizeUrl, createStateStore, profileFromGitHubUser,
     appRedirect, errorRedirect, createHandler
 };
