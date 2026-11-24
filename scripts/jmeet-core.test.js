@@ -2,67 +2,54 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const core = require("../public/jmeet-core.js");
 
-const NOW = Date.UTC(2026, 10, 20);
-const future = NOW / 1000 + 3600;
-const toB64Url = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
+const ana = { name: "Ana", picture: "" };
 
-test("room codes are generated in the abc-defg-hij shape", () => {
-    const code = core.makeRoomCode(() => 0);
-    assert.equal(code, "aaa-aaaa-aaa");
-    assert.ok(core.isRoomCode(core.makeRoomCode((n) => Math.floor(Math.random() * n))));
+test("sign-in machine allows every listed transition", () => {
+    const { authTransition } = core;
+    assert.deepEqual(authTransition({ status: "checking" }, { type: "ok", user: ana }), { status: "signedIn", user: ana });
+    assert.deepEqual(authTransition({ status: "checking" }, { type: "unauthorized" }), { status: "signedOut" });
+    assert.deepEqual(authTransition({ status: "checking" }, { type: "error" }), { status: "failed" });
+    const signedIn = { status: "signedIn", user: ana };
+    const ben = { name: "Ben", picture: "" };
+    assert.deepEqual(authTransition(signedIn, { type: "ok", user: ben }), { status: "signedIn", user: ben });
+    assert.deepEqual(authTransition(signedIn, { type: "unauthorized" }), { status: "signedOut" });
+    assert.deepEqual(authTransition(signedIn, { type: "logout" }), { status: "signedOut" });
+    assert.deepEqual(authTransition({ status: "failed" }, { type: "retry" }), { status: "checking" });
 });
 
-test("isRoomCode rejects other shapes", () => {
-    for (const bad of ["", "abc-defg-hi", "ABC-DEFG-HIJ", "abc-defg-hij-", "abc_defg_hij", null]) {
-        assert.equal(core.isRoomCode(bad), false, String(bad));
-    }
+test("sign-in machine rejects invalid transitions and empty profiles", () => {
+    assert.throws(() => core.authTransition({ status: "signedOut" }, { type: "ok", user: ana }));
+    assert.throws(() => core.authTransition({ status: "signedOut" }, { type: "logout" }));
+    assert.throws(() => core.authTransition({ status: "signedIn", user: ana }, { type: "error" }));
+    assert.throws(() => core.authTransition({ status: "checking" }, { type: "retry" }));
+    assert.throws(() => core.authTransition({ status: "checking" }, { type: "ok", user: { name: "" } }));
 });
 
-test("normalizeRoomInput accepts pasted codes and links", () => {
-    assert.equal(core.normalizeRoomInput(" ABC-DEFG-HIJ "), "abc-defg-hij");
-    assert.equal(core.normalizeRoomInput("http://localhost:8000/#abc-defg-hij"), "abc-defg-hij");
-    assert.equal(core.normalizeRoomInput("hello"), "");
+test("call machine allows every listed transition", () => {
+    const { CALL, callTransition } = core;
+    assert.equal(callTransition(CALL.IDLE, "join"), CALL.JOINING);
+    assert.equal(callTransition(CALL.JOINING, "connected"), CALL.IN_CALL);
+    assert.equal(callTransition(CALL.JOINING, "end"), CALL.IDLE);
+    assert.equal(callTransition(CALL.IN_CALL, "end"), CALL.IDLE);
 });
 
-test("roomFromHash reads a room code from the URL hash", () => {
-    assert.equal(core.roomFromHash("#abc-defg-hij"), "abc-defg-hij");
-    assert.equal(core.roomFromHash("#nope"), "");
-    assert.equal(core.roomFromHash(""), "");
+test("call machine rejects invalid transitions", () => {
+    assert.throws(() => core.callTransition(core.CALL.IDLE, "end"));
+    assert.throws(() => core.callTransition(core.CALL.IN_CALL, "join"));
+    assert.throws(() => core.callTransition(core.CALL.IDLE, "connected"));
 });
 
-test("connection machine allows every listed transition", () => {
-    const { CONN, connTransition } = core;
-    assert.equal(connTransition(CONN.CONNECTING, "opened"), CONN.OPEN);
-    assert.equal(connTransition(CONN.CONNECTING, "lost"), CONN.RECONNECTING);
-    assert.equal(connTransition(CONN.CONNECTING, "close"), CONN.CLOSED);
-    assert.equal(connTransition(CONN.OPEN, "lost"), CONN.RECONNECTING);
-    assert.equal(connTransition(CONN.OPEN, "close"), CONN.CLOSED);
-    assert.equal(connTransition(CONN.RECONNECTING, "opened"), CONN.OPEN);
-    assert.equal(connTransition(CONN.RECONNECTING, "close"), CONN.CLOSED);
+test("profileToUser reads Google and GitHub profiles", () => {
+    assert.deepEqual(core.profileToUser({ name: "Ana Cruz", picture: "https://lh3.googleusercontent.com/a/x" }),
+        { name: "Ana Cruz", picture: "https://lh3.googleusercontent.com/a/x" });
+    assert.deepEqual(core.profileToUser({ login: "anacruz", name: null, avatar_url: "https://avatars.githubusercontent.com/u/1" }),
+        { name: "anacruz", picture: "https://avatars.githubusercontent.com/u/1" });
+    assert.deepEqual(core.profileToUser({ email: "a@b.c" }), { name: "a@b.c", picture: "" });
+    assert.deepEqual(core.profileToUser(null), { name: "Participant", picture: "" });
 });
 
-test("connection machine rejects invalid transitions", () => {
-    assert.throws(() => core.connTransition(core.CONN.CLOSED, "opened"));
-    assert.throws(() => core.connTransition(core.CONN.OPEN, "opened"));
-});
-
-test("reconnect delay doubles up to 15 seconds", () => {
-    assert.deepEqual([0, 1, 2, 3, 4, 10].map(core.reconnectDelay), [1000, 2000, 4000, 8000, 15000, 15000]);
-});
-
-test("sign-in machine signs in and out", () => {
-    const user = { provider: "github", name: "Ana", exp: Date.now() / 1000 + 60 };
-    const signedIn = core.authTransition({ status: "signedOut" }, { type: "signIn", user });
-    assert.deepEqual(signedIn, { status: "signedIn", user });
-    assert.deepEqual(core.authTransition(signedIn, { type: "signOut" }), { status: "signedOut" });
-});
-
-test("sign-in machine rejects invalid transitions and profiles", () => {
-    assert.throws(() => core.authTransition({ status: "signedOut" }, { type: "signOut" }));
-    assert.throws(() => core.authTransition({ status: "signedOut" },
-        { type: "signIn", user: { provider: "myspace", name: "x", exp: Date.now() / 1000 + 60 } }));
-    assert.throws(() => core.authTransition({ status: "signedOut" },
-        { type: "signIn", user: { provider: "google", name: "x", exp: 1 } }));
+test("profileToUser drops avatars from other hosts", () => {
+    assert.equal(core.profileToUser({ name: "A", picture: "https://evil.example/x.png" }).picture, "");
 });
 
 test("isAllowedPicture only accepts Google and GitHub avatars over https", () => {
@@ -73,26 +60,42 @@ test("isAllowedPicture only accepts Google and GitHub avatars over https", () =>
     assert.equal(core.isAllowedPicture("not a url"), false);
 });
 
-test("parseAuthFragment reads the gateway redirect after GitHub sign-in", () => {
-    const hash = "#auth=" + toB64Url({ provider: "github", name: "Ana", email: "a@b.c",
-        picture: "https://avatars.githubusercontent.com/u/1", exp: future }) + "&room=abc-defg-hij";
-    assert.deepEqual(core.parseAuthFragment(hash, NOW), {
-        user: { provider: "github", name: "Ana", email: "a@b.c",
-                picture: "https://avatars.githubusercontent.com/u/1", exp: future },
-        room: "abc-defg-hij"
-    });
+test("initialOf gives an uppercase letter or ?", () => {
+    assert.equal(core.initialOf(" ana"), "A");
+    assert.equal(core.initialOf(""), "?");
+    assert.equal(core.initialOf(null), "?");
 });
 
-test("parseAuthFragment rejects missing, broken, expired or foreign profiles", () => {
-    assert.equal(core.parseAuthFragment("#abc-defg-hij", NOW), null);
-    assert.equal(core.parseAuthFragment("#auth=%%%", NOW), null);
-    assert.equal(core.parseAuthFragment("#auth=" + toB64Url({ provider: "github", name: "A", exp: 1 }), NOW), null);
-    assert.equal(core.parseAuthFragment("#auth=" + toB64Url({ provider: "google", name: "A", exp: future }), NOW), null);
+test("gridColumns fits up to 8 tiles", () => {
+    assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8].map(core.gridColumns), [1, 2, 2, 2, 3, 3, 3, 3]);
 });
 
-test("parseAuthFragment drops avatars from other hosts", () => {
-    const hash = "#auth=" + toB64Url({ provider: "github", name: "A", picture: "https://evil.example/x.png", exp: future });
-    assert.equal(core.parseAuthFragment(hash, NOW).user.picture, "");
+test("small signals pass through unsplit", () => {
+    const data = { type: "candidate", candidate: { candidate: "x" } };
+    assert.deepEqual(core.splitSignal(data, "c1", 3000), [data]);
+});
+
+test("big signals split into parts and join back in any order", () => {
+    const data = { type: "offer", description: { type: "offer", sdp: "v=0\r\n".repeat(2000) } };
+    const parts = core.splitSignal(data, "c1", 3000);
+    assert.ok(parts.length > 1);
+    assert.ok(parts.every(p => p.type === "chunk" && p.part.length <= 3000));
+    const store = new Map();
+    const shuffled = [...parts].reverse();
+    const results = shuffled.map(p => core.collectChunk(store, 2, p));
+    assert.deepEqual(results.slice(0, -1), Array(parts.length - 1).fill(null));
+    assert.deepEqual(results.at(-1), data);
+    assert.equal(store.size, 0);
+});
+
+test("collectChunk keeps senders apart and ignores bad parts", () => {
+    const store = new Map();
+    const [a0, a1] = core.splitSignal({ s: "x".repeat(50) }, "same", 40);
+    assert.equal(core.collectChunk(store, 1, a0), null);
+    assert.equal(core.collectChunk(store, 2, a1), null); // other sender, same cid
+    assert.equal(core.collectChunk(store, 1, { cid: "z", i: 5, n: 2, part: "" }), null);
+    assert.equal(core.collectChunk(store, 1, null), null);
+    assert.deepEqual(core.collectChunk(store, 1, a1), { s: "x".repeat(50) });
 });
 
 test("parseTheme falls back to system", () => {

@@ -8,111 +8,104 @@
     <script>try { var t = localStorage.getItem("jmeet.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 -4 40 40'><path fill='%2315bcca' d='M0 8 8 0v8z'/><path fill='%23bd7a0b' d='M0 8h8v16H0z'/><path fill='%23cb57ac' d='M0 24h8v8H2a2 2 0 0 1-2-2z'/><path fill='%230443fa' d='M8 0h18a2 2 0 0 1 2 2v6H8z'/><path fill='%23cb57ac' d='M8 24h20v6a2 2 0 0 1-2 2H8zM20 8h8v16h-8zM28 12l10-8v24l-10-8z'/></svg>">
     <link rel="stylesheet" href="/style.css">
-    <!-- Google OAuth client ID, GitHub helper URL, TURN servers (copy public/config.example.js to public/config.js) -->
-    <script src="/config.js"></script>
     <script src="/jmeet-core.js"></script>
-    <!-- Google Identity Services (Sign in with Google) -->
-    <script id="gsiScript" src="https://accounts.google.com/gsi/client" async></script>
 </head>
 <body>
-    <!-- ==================== JOIN SCREEN ==================== -->
-    <main id="joinScreen">
-        <div id="topBar">
-            <span class="brand" id="brand"></span>
-            <div class="theme-picker" role="group" aria-label="Theme">
-                <button type="button" data-theme-choice="system" aria-label="System" title="System" aria-pressed="true">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
-                </button>
-                <button type="button" data-theme-choice="light" aria-label="Light" title="Light" aria-pressed="false">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-                </button>
-                <button type="button" data-theme-choice="dark" aria-label="Dark" title="Dark" aria-pressed="false">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
-                </button>
-            </div>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <main id="main">
+        <!-- ==================== SESSION CHECK ==================== -->
+        <div id="session-status" class="loading-screen" role="status">
+            <span class="brand" data-brand></span>
+            <p>Checking your session...</p>
         </div>
-        <div id="previewWrap">
-            <video id="previewVideo" autoplay playsinline muted></video>
-            <div id="previewMsg" class="hidden"></div>
-            <div id="previewControls">
-                <button class="ctrl" id="previewMicBtn" type="button" title="Turn off microphone"></button>
-                <button class="ctrl" id="previewCamBtn" type="button" title="Turn off camera"></button>
+        <div id="error" class="error-banner" role="alert" hidden></div>
+
+        <!-- ==================== LOGIN ==================== -->
+        <section id="login" class="login" hidden aria-labelledby="login-title">
+            <div class="top-bar">
+                <span class="brand" data-brand></span>
+                <div class="theme-picker" role="group" aria-label="Theme" data-theme-picker></div>
             </div>
-        </div>
-        <div id="joinBox">
-            <h1>Ready to join?</h1>
-            <p id="connStatus" role="status">Connecting to server...</p>
-            <div id="roomBox">
-                <label for="roomInput">Room code</label>
-                <div class="room-row">
-                    <input type="text" id="roomInput" placeholder="abc-defg-hij" autocomplete="off"
-                           spellcheck="false" autocapitalize="none" maxlength="80" aria-invalid="false" />
-                    <button type="button" id="newRoomBtn" class="text-btn">New room</button>
-                </div>
-                <p id="roomError" class="hidden">Enter a room code like abc-defg-hij, or make a new room.</p>
-            </div>
-            <div id="authBox">
-                <p id="authMsg">Sign in with Google or GitHub to join.</p>
-                <div id="googleBtn"></div>
-                <a id="githubBtn" class="gh-btn hidden" href="#">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-                    Sign in with GitHub
-                </a>
-                <div id="userChip" class="hidden">
-                    <img id="userPic" alt="" referrerpolicy="no-referrer" />
-                    <div id="userText">
-                        <b id="userName"></b>
-                        <span id="userEmail"></span>
+            <div class="login-body">
+                <div class="login-card">
+                    <h1 id="login-title">Video calls and chat for your group</h1>
+                    <p>Up to 8 people in one call. Sign in to join.</p>
+                    <div class="login-actions">
+                        <a class="provider-btn" href="/login/google">
+                            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285f4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.8-2.1 5.1-4.4 6.7v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.2z"/><path fill="#34a853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.6-3.9-12.3-9.1H4.4v5.7C8 41.1 15.4 46 24 46z"/><path fill="#fbbc05" d="M11.7 28.2c-.4-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.4C2.9 17.1 2 20.4 2 24s.9 6.9 2.4 9.9l7.3-5.7z"/><path fill="#ea4335" d="M24 10.7c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.2 29.9 2 24 2 15.4 2 8 6.9 4.4 14.1l7.3 5.7c1.7-5.2 6.6-9.1 12.3-9.1z"/></svg>
+                            Continue with Google
+                        </a>
+                        <a class="provider-btn" href="/login/github">
+                            <svg viewBox="0 0 16 16" aria-hidden="true" class="gh-mark"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+                            Continue with GitHub
+                        </a>
                     </div>
-                    <button id="signOutBtn" type="button">Sign out</button>
+                </div>
+                <!-- A still of the call grid, built from the same tile styles -->
+                <div class="login-preview" aria-hidden="true">
+                    <div class="tile video-off"><div class="avatar"><span>A</span></div><div class="label"><span class="name">Ana</span></div></div>
+                    <div class="tile video-off speaking"><div class="avatar"><span>B</span></div><div class="label"><span class="name">Ben</span></div></div>
+                    <div class="tile video-off audio-off"><div class="avatar"><span>C</span></div><div class="label"><span class="mic-off" data-icon="micOffSmall"></span><span class="name">Cy</span></div></div>
+                    <div class="tile video-off"><div class="avatar"><span>D</span></div><div class="label"><span class="name">Dee</span></div></div>
                 </div>
             </div>
-            <button id="joinBtn" class="pill-btn" disabled>Join now</button>
-        </div>
+        </section>
+
+        <!-- ==================== CALL ==================== -->
+        <section id="app" class="call" hidden aria-label="Video call">
+            <header class="call-header">
+                <span class="brand" data-brand></span>
+                <p id="status" role="status">Not in the call</p>
+                <div class="call-header-end">
+                    <div id="identity" class="identity"></div>
+                    <div class="theme-picker" role="group" aria-label="Theme" data-theme-picker></div>
+                    <button id="logout" class="text-btn" type="button">Log out</button>
+                </div>
+            </header>
+
+            <div class="call-body">
+                <div id="videos" class="grid">
+                    <figure class="tile self video-off" id="local-tile">
+                        <video id="local" autoplay muted playsinline></video>
+                        <div class="avatar"><span></span><img alt="" referrerpolicy="no-referrer"></div>
+                        <figcaption class="label"><span class="mic-off" data-icon="micOffSmall"></span><span class="name">You</span></figcaption>
+                    </figure>
+                </div>
+
+                <aside id="chat" class="chat" aria-labelledby="chat-title">
+                    <div class="chat-header">
+                        <h2 id="chat-title">Chat</h2>
+                        <button id="chat-close" class="icon-btn" type="button" aria-label="Close chat" title="Close chat" data-icon="close"></button>
+                    </div>
+                    <div id="chat-log" role="log" aria-live="polite">
+                        <p class="chat-empty">Join the call to chat. Messages are gone when everyone leaves.</p>
+                    </div>
+                    <form id="chat-form" autocomplete="off">
+                        <label for="chat-input" class="visually-hidden">Message</label>
+                        <input id="chat-input" maxlength="1000" placeholder="Send a message" disabled>
+                        <button id="chat-send" type="submit" aria-label="Send" title="Send" disabled data-icon="send"></button>
+                    </form>
+                </aside>
+            </div>
+
+            <div class="controls">
+                <span id="clock" class="clock"></span>
+                <div class="controls-center">
+                    <button id="audio-toggle" class="ctrl" type="button" aria-pressed="true" aria-label="Microphone"></button>
+                    <button id="video-toggle" class="ctrl" type="button" aria-pressed="true" aria-label="Camera"></button>
+                    <button id="share-toggle" class="ctrl" type="button" aria-pressed="false" aria-label="Present screen" hidden></button>
+                    <button id="join" class="pill-btn" type="button">Join call</button>
+                    <button id="leave" class="ctrl leave" type="button" aria-label="Leave call" title="Leave call" hidden></button>
+                </div>
+                <button id="chat-toggle" class="ctrl" type="button" aria-pressed="true" aria-label="Chat" title="Chat"></button>
+            </div>
+        </section>
     </main>
-    <footer class="site-footer" id="siteFooter">
+    <footer class="site-footer">
         <p><span>Built by <a href="https://github.com/Jevoel16">Sprucetrap</a>.</span> <a href="https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/blob/main/LICENSE">License</a></p>
     </footer>
 
-    <!-- ==================== CALL SCREEN ==================== -->
-    <div id="callScreen" class="hidden">
-        <div id="stage">
-            <div id="grid"></div>
-        </div>
-
-        <aside id="chatPanel" class="hidden">
-            <div id="chatHeader">
-                <span>In-call messages</span>
-                <button id="chatClose" title="Close">&times;</button>
-            </div>
-            <div id="chatNote">Only people in this room see these messages, and they're gone when the call ends.</div>
-            <div id="chatLog"></div>
-            <form id="chatForm" autocomplete="off">
-                <input type="text" id="chatInput" placeholder="Send a message" aria-label="Message" maxlength="500" />
-                <button type="submit" id="chatSend" title="Send" disabled>
-                    <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
-                </button>
-            </form>
-        </aside>
-
-        <div id="controls">
-            <div id="roomInfo">
-                <b id="clock"></b> <span>|</span> <span id="roomCode"></span>
-                <button type="button" id="copyLinkBtn" class="text-btn">Copy link</button>
-            </div>
-            <div id="centerBtns">
-                <button class="ctrl" id="micBtn" title="Turn off microphone"></button>
-                <button class="ctrl" id="camBtn" title="Turn off camera"></button>
-                <button class="ctrl" id="shareBtn" title="Present now"></button>
-                <button class="ctrl leave" id="leaveBtn" title="Leave call"></button>
-            </div>
-            <div id="rightBtns">
-                <button class="ctrl" id="chatBtn" title="Chat with everyone"></button>
-            </div>
-        </div>
-    </div>
-
-    <button type="button" id="audioUnlock" class="pill-btn hidden">Tap to hear the call</button>
+    <button type="button" id="audio-unlock" class="pill-btn" hidden>Tap to hear the call</button>
     <div id="toast" role="status" aria-live="polite"></div>
 
     <script>
@@ -120,59 +113,72 @@
         // ICONS
         // ==============================
         const ICONS = {
-            logo: '<svg viewBox="0 0 40 32"><path class="logo-b" d="M0 8 8 0v8z"/><path class="logo-a" d="M0 8h8v16H0z"/><path class="logo-d" d="M0 24h8v8H2a2 2 0 0 1-2-2z"/><path class="logo-c" d="M8 0h18a2 2 0 0 1 2 2v6H8z"/><path class="logo-d" d="M8 24h20v6a2 2 0 0 1-2 2H8zM20 8h8v16h-8zM28 12l10-8v24l-10-8z"/></svg>',
-            micOn: '<svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>',
-            micOff: '<svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5a3 3 0 0 0-6 0v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52a5 5 0 0 1-5-5H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>',
-            camOn: '<svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
-            camOff: '<svg viewBox="0 0 24 24"><path d="M21 6.5l-4 4V7a1 1 0 0 0-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/></svg>',
-            share: '<svg viewBox="0 0 24 24"><path d="M20 18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2H0v2h24v-2h-4zM4 6h16v10H4V6zm9 7.5V15l3-3-3-3v1.5c-3 .4-4.3 2.4-5 4.5 1.1-1.4 2.6-2 5-2z"/></svg>',
-            leave: '<svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85a.98.98 0 0 1-.7.28.99.99 0 0 1-.71-.29L.29 13.08A.96.96 0 0 1 0 12.37c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48a.99.99 0 0 1-.71.29.98.98 0 0 1-.7-.28 11.27 11.27 0 0 0-2.67-1.85.99.99 0 0 1-.56-.9v-3.1A15.9 15.9 0 0 0 12 9z"/></svg>',
-            chat: '<svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h10v2H7zm0-3h10v2H7zm0 6h7v2H7z"/></svg>',
-            micOffSmall: '<svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5a3 3 0 0 0-6 0v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52a5 5 0 0 1-5-5H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>'
+            logo: '<svg viewBox="0 0 40 32" aria-hidden="true"><path class="logo-b" d="M0 8 8 0v8z"/><path class="logo-a" d="M0 8h8v16H0z"/><path class="logo-d" d="M0 24h8v8H2a2 2 0 0 1-2-2z"/><path class="logo-c" d="M8 0h18a2 2 0 0 1 2 2v6H8z"/><path class="logo-d" d="M8 24h20v6a2 2 0 0 1-2 2H8zM20 8h8v16h-8zM28 12l10-8v24l-10-8z"/></svg>',
+            micOn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>',
+            micOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5a3 3 0 0 0-6 0v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52a5 5 0 0 1-5-5H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>',
+            camOn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
+            camOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 6.5l-4 4V7a1 1 0 0 0-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/></svg>',
+            share: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2H0v2h24v-2h-4zM4 6h16v10H4V6zm9 7.5V15l3-3-3-3v1.5c-3 .4-4.3 2.4-5 4.5 1.1-1.4 2.6-2 5-2z"/></svg>',
+            leave: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85a.98.98 0 0 1-.7.28.99.99 0 0 1-.71-.29L.29 13.08A.96.96 0 0 1 0 12.37c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48a.99.99 0 0 1-.71.29.98.98 0 0 1-.7-.28 11.27 11.27 0 0 0-2.67-1.85.99.99 0 0 1-.56-.9v-3.1A15.9 15.9 0 0 0 12 9z"/></svg>',
+            chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h10v2H7zm0-3h10v2H7zm0 6h7v2H7z"/></svg>',
+            send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>',
+            close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+            micOffSmall: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5a3 3 0 0 0-6 0v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52a5 5 0 0 1-5-5H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>'
+        };
+        const THEME_ICONS = {
+            system: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+            light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+            dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>'
         };
 
         // ==============================
         // STATE
         // ==============================
         const Core = window.JmeetCore;
-        const CONFIG = window.JMEET_CONFIG || {};
-        const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + (location.host || "localhost:8000");
-        // STUN finds a direct path; across different networks (mobile data vs
-        // home Wi-Fi) that path often fails or only works one way, so a TURN
-        // relay from config.js is used as the fallback.
-        const RTC_CONFIG = {
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-                .concat(Array.isArray(CONFIG.iceServers) ? CONFIG.iceServers : [])
-        };
-        const PING_MS = 25000;       // under Cloudflare's ~100 s idle limit
-        const PONG_TIMEOUT_MS = 60000;
-
-        let socket = null;
-        let conn = Core.CONN.CONNECTING;
-        let reconnectAttempt = 0;
-        let pingTimer = null;
-        let lastPong = 0;
-        let myId = null;
-        let myName = "";
-        let myPicture = "";
-        let auth = { status: Core.AUTH.SIGNED_OUT }; // see docs/state-machines.md
-        let room = "";
-        let inCall = false;
-        let signalQueue = Promise.resolve();
-        let localStream = null;   // camera + mic
-        let screenStream = null;  // screen share (when presenting)
-        let audioOn = true;
-        let videoOn = true;
-        let unread = false;
-
-        // peerId -> { pc, name, tile, pendingIce: [], audio, video }
-        const peers = {};
-
         const $ = (id) => document.getElementById(id);
+        const login = $("login");
+        const app = $("app");
+        const sessionStatus = $("session-status");
+        const errorBox = $("error");
+        const join = $("join");
+        const leave = $("leave");
+        const status = $("status");
+        const localVideo = $("local");
+        const localTile = $("local-tile");
+        const videos = $("videos");
+        const videoToggle = $("video-toggle");
+        const audioToggle = $("audio-toggle");
+        const shareToggle = $("share-toggle");
+        const chatInput = $("chat-input");
+        const chatSend = $("chat-send");
+        const chatLog = $("chat-log");
+        const chatToggle = $("chat-toggle");
+        const iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
+        const CHUNK_SIZE = 3000;
+
+        let auth = { status: Core.AUTH.CHECKING };   // see docs/state-machines.md
+        let call = Core.CALL.IDLE;
+        const enabled = { video: true, audio: true };
+        let stream = null;        // camera + mic
+        let screenTrack = null;   // while presenting
+        let socket = null;
+        let selfId = null;
+        let selfUser = null;
+        let messages = Promise.resolve();
+        let generation = 0;
+        const participants = new Map();  // id -> { id, user, tile, video, peer, candidates, incoming }
+        const chunks = new Map();
 
         // ==============================
         // HELPERS
         // ==============================
+        function setStatus(message) { status.textContent = message; }
+        function countStatus() {
+            const n = participants.size + 1;
+            setStatus(n === 1 ? "Only you so far" : `${n} in the call`);
+        }
+        function showError(message) { errorBox.textContent = message; errorBox.hidden = false; }
+
         function toast(text) {
             const t = $("toast");
             t.textContent = text;
@@ -181,105 +187,33 @@
             toast.timer = setTimeout(() => t.classList.remove("show"), 2500);
         }
 
-        // The native http.dll crashes on WebSocket frames of roughly 8 KB+,
-        // and WebRTC offers/answers are often bigger than that, so large
-        // messages are split into small "chunk" messages and reassembled.
-        const CHUNK_SIZE = 3000;
-        const incomingChunks = {}; // "from:cid" -> { parts: [], received }
-
-        function send(obj) {
-            if (!socket || socket.readyState !== WebSocket.OPEN) return;
-            obj.from = myId;
-            const json = JSON.stringify(obj);
-            if (json.length <= CHUNK_SIZE) {
-                socket.send(json);
-                return;
-            }
-            const cid = Math.random().toString(36).slice(2, 10);
-            const n = Math.ceil(json.length / CHUNK_SIZE);
-            for (let i = 0; i < n; i++) {
-                const chunk = { type: "chunk", from: myId, cid, i, n,
-                                data: json.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE) };
-                if (obj.to !== undefined) chunk.to = obj.to;
-                socket.send(JSON.stringify(chunk));
-            }
-        }
-
-        // Returns the full message once every chunk has arrived, else null
-        function collectChunk(msg) {
-            const key = msg.from + ":" + msg.cid;
-            const entry = incomingChunks[key] || (incomingChunks[key] = { parts: [], received: 0 });
-            if (entry.parts[msg.i] === undefined) {
-                entry.parts[msg.i] = msg.data;
-                entry.received++;
-            }
-            if (entry.received < msg.n) return null;
-            delete incomingChunks[key];
-            try { return JSON.parse(entry.parts.join("")); } catch (e) { return null; }
-        }
-
         function formatTime(ms) {
             return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
         }
 
-        function updateClock() {
-            $("clock").textContent = formatTime(Date.now());
+        // Initial in a circle, with the provider photo on top when it loads
+        function avatar(user, className) {
+            const icon = document.createElement("span");
+            icon.className = className;
+            const initial = document.createElement("span");
+            initial.textContent = Core.initialOf(user.name);
+            icon.append(initial);
+            if (Core.isAllowedPicture(user.picture)) {
+                const image = document.createElement("img");
+                image.alt = "";
+                image.referrerPolicy = "no-referrer";
+                image.addEventListener("error", () => image.remove());
+                image.src = user.picture;
+                icon.append(image);
+            }
+            return icon;
         }
 
         // ==============================
         // VIDEO TILES
         // ==============================
-        function createTile(id, name, isSelf, picture) {
-            const tile = document.createElement("div");
-            tile.className = "tile" + (isSelf ? " self" : "");
-            tile.dataset.id = id;
-
-            const video = document.createElement("video");
-            video.autoplay = true;
-            video.playsInline = true;
-            if (isSelf) video.muted = true; // never play back our own audio
-
-            const avatar = document.createElement("div");
-            avatar.className = "avatar";
-            const initial = document.createElement("span");
-            initial.textContent = (name || "?").charAt(0);
-            avatar.appendChild(initial);
-            const pic = document.createElement("img");
-            pic.alt = "";
-            pic.referrerPolicy = "no-referrer"; // Google avatar URLs reject some referrers
-            pic.onerror = () => pic.removeAttribute("src");
-            avatar.appendChild(pic);
-
-            const label = document.createElement("div");
-            label.className = "label";
-            const micOff = document.createElement("span");
-            micOff.className = "mic-off";
-            micOff.innerHTML = ICONS.micOffSmall;
-            const nameSpan = document.createElement("span");
-            nameSpan.className = "name";
-            nameSpan.textContent = isSelf ? name + " (You)" : name;
-            label.appendChild(micOff);
-            label.appendChild(nameSpan);
-
-            tile.appendChild(video);
-            tile.appendChild(avatar);
-            tile.appendChild(label);
-            $("grid").appendChild(tile);
-            setTilePicture(tile, picture);
-            layoutGrid();
-            return tile;
-        }
-
-        function setTileName(tile, name) {
-            tile.querySelector(".name").textContent = name;
-            tile.querySelector(".avatar span").textContent = (name || "?").charAt(0);
-        }
-
-        // Only Google and GitHub profile photos are shown, so a peer can't inject arbitrary URLs
-        function setTilePicture(tile, picture) {
-            const img = tile.querySelector(".avatar img");
-            if (Core.isAllowedPicture(picture)) img.src = picture;
-            else img.removeAttribute("src");
+        function layoutGrid() {
+            videos.style.setProperty("--cols", Core.gridColumns(videos.children.length));
         }
 
         function setTileMedia(tile, audio, video) {
@@ -287,759 +221,564 @@
             tile.classList.toggle("video-off", !video);
         }
 
-        function layoutGrid() {
-            const n = $("grid").children.length;
-            const cols = n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4;
-            $("grid").style.setProperty("--cols", cols);
+        function createTile(user) {
+            const tile = document.createElement("figure");
+            tile.className = "tile video-off";
+            const video = document.createElement("video");
+            video.autoplay = true;
+            video.playsInline = true;
+            const face = avatar(user, "avatar");
+            const label = document.createElement("figcaption");
+            label.className = "label";
+            const micOff = document.createElement("span");
+            micOff.className = "mic-off";
+            micOff.innerHTML = ICONS.micOffSmall;
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = user.name;
+            label.append(micOff, name);
+            tile.append(video, face, label);
+            videos.appendChild(tile);
+            layoutGrid();
+            return { tile, video };
+        }
+
+        function setLocalTile(user) {
+            localTile.querySelector(".avatar span").textContent = Core.initialOf(user.name);
+            const img = localTile.querySelector(".avatar img");
+            if (Core.isAllowedPicture(user.picture)) img.src = user.picture;
+            else img.removeAttribute("src");
+            localTile.querySelector(".name").textContent = user.name + " (You)";
         }
 
         // ==============================
-        // MEDIA
+        // ACTIVE SPEAKER
         // ==============================
-        async function getLocalMedia() {
-            try {
-                return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            } catch (e) {
-                try {
-                    return await navigator.mediaDevices.getUserMedia({ audio: true });
-                } catch (e2) {
-                    return null;
-                }
-            }
+        // One analyser per audio stream; the loudest tile above a floor gets a ring.
+        let audioContext = null;
+        let speakerTimer = null;
+        const meters = new Map(); // tile -> { analyser, source, data }
+
+        function meter(tile, mediaStream) {
+            if (!audioContext || meters.has(tile) || !mediaStream.getAudioTracks().length) return;
+            const source = audioContext.createMediaStreamSource(mediaStream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            source.connect(analyser);
+            meters.set(tile, { analyser, source, data: new Uint8Array(analyser.fftSize) });
+        }
+
+        function unmeter(tile) {
+            const m = meters.get(tile);
+            if (m) m.source.disconnect();
+            meters.delete(tile);
+            tile.classList.remove("speaking");
+        }
+
+        function tickSpeaker() {
+            let loudest = null;
+            let peak = 8; // ignore background hiss
+            meters.forEach((m, tile) => {
+                m.analyser.getByteTimeDomainData(m.data);
+                let max = 0;
+                for (const v of m.data) max = Math.max(max, Math.abs(v - 128));
+                if (max > peak && !tile.classList.contains("audio-off")) { peak = max; loudest = tile; }
+            });
+            meters.forEach((m, tile) => tile.classList.toggle("speaking", tile === loudest));
+        }
+
+        // ==============================
+        // CONTROLS
+        // ==============================
+        function renderToggle(button, on, onIcon, offIcon, what) {
+            button.innerHTML = on ? onIcon : offIcon;
+            button.classList.toggle("off", !on);
+            button.setAttribute("aria-pressed", String(on));
+            button.title = (on ? "Turn off " : "Turn on ") + what;
+        }
+
+        function renderControls() {
+            renderToggle(audioToggle, enabled.audio, ICONS.micOn, ICONS.micOff, "microphone");
+            renderToggle(videoToggle, enabled.video, ICONS.camOn, ICONS.camOff, "camera");
+            shareToggle.innerHTML = ICONS.share;
+            shareToggle.classList.toggle("active", !!screenTrack);
+            shareToggle.setAttribute("aria-pressed", String(!!screenTrack));
+            shareToggle.title = screenTrack ? "Stop presenting" : "Present screen";
+            const inCall = call !== Core.CALL.IDLE;
+            join.hidden = inCall;
+            leave.hidden = !inCall;
+            shareToggle.hidden = call !== Core.CALL.IN_CALL || !navigator.mediaDevices?.getDisplayMedia;
+            setTileMedia(localTile, enabled.audio && hasTrack("audio"), !!screenTrack || (enabled.video && hasTrack("video")));
+            localTile.classList.toggle("screen", !!screenTrack);
         }
 
         function hasTrack(kind) {
-            return !!(localStream && localStream.getTracks().some(t => t.kind === kind));
+            return !!(stream && stream.getTracks().some(track => track.kind === kind));
         }
 
-        function renderToggle(btn, on, onIcon, offIcon, what) {
-            btn.innerHTML = on ? onIcon : offIcon;
-            btn.classList.toggle("off", !on);
-            btn.title = (on ? "Turn off " : "Turn on ") + what;
+        // The track we send for a kind: the screen replaces the camera while presenting
+        function outgoingTrack(kind) {
+            if (kind === "video" && screenTrack) return screenTrack;
+            return stream ? stream.getTracks().find(item => item.kind === kind) || null : null;
         }
 
-        // Keeps the join-screen and call-bar buttons in sync
-        function updateControlButtons() {
-            ["micBtn", "previewMicBtn"].forEach(id =>
-                renderToggle($(id), audioOn, ICONS.micOn, ICONS.micOff, "microphone"));
-            ["camBtn", "previewCamBtn"].forEach(id =>
-                renderToggle($(id), videoOn, ICONS.camOn, ICONS.camOff, "camera"));
-            $("shareBtn").classList.toggle("active", !!screenStream);
-            $("shareBtn").title = screenStream ? "Stop presenting" : "Present now";
-        }
-
-        function broadcastMediaState() {
-            send({ type: "media", audio: audioOn, video: videoOn || !!screenStream });
-        }
-
-        function toggleMic() {
-            if (!hasTrack("audio")) return toast("No microphone available");
-            audioOn = !audioOn;
-            localStream.getAudioTracks().forEach(t => t.enabled = audioOn);
-            applyMediaState();
-        }
-
-        function toggleCam() {
-            if (!hasTrack("video")) return toast("No camera available");
-            videoOn = !videoOn;
-            localStream.getVideoTracks().forEach(t => t.enabled = videoOn);
-            applyMediaState();
-        }
-
-        // Before joining there is no self tile or peers, only the preview
-        function applyMediaState() {
-            updateControlButtons();
-            if (!inCall) return updatePreviewMsg();
-            setTileMedia(peers.self.tile, audioOn, videoOn || !!screenStream);
-            broadcastMediaState();
-        }
-
-        // Swap the outgoing video track on every peer connection
-        function replaceVideoTrack(track) {
-            Object.keys(peers).forEach(id => {
-                const p = peers[id];
-                if (!p.pc) return;
-                p.pc.getTransceivers().forEach(tr => {
-                    if (tr.receiver.track && tr.receiver.track.kind === "video") {
-                        tr.sender.replaceTrack(track).catch(() => {});
-                    }
-                });
-            });
-        }
-
-        async function toggleShare() {
-            if (screenStream) return stopShare();
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-                return toast(window.isSecureContext ? "Screen sharing is not supported"
-                                                    : "Screen sharing needs localhost or HTTPS");
-            }
+        function sendMediaState() {
+            if (call !== Core.CALL.IN_CALL) return;
             try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            } catch (e) {
-                return; // user cancelled
-            }
-            const track = screenStream.getVideoTracks()[0];
-            track.onended = stopShare;
-            replaceVideoTrack(track);
-            const selfTile = peers.self.tile;
-            selfTile.classList.add("screen");
-            selfTile.querySelector("video").srcObject = screenStream;
-            setTileMedia(selfTile, audioOn, true);
-            updateControlButtons();
-            broadcastMediaState();
-            toast("You are presenting to everyone");
-        }
-
-        function stopShare() {
-            if (!screenStream) return;
-            screenStream.getTracks().forEach(t => t.stop());
-            screenStream = null;
-            const camTrack = localStream ? localStream.getVideoTracks()[0] || null : null;
-            replaceVideoTrack(camTrack);
-            const selfTile = peers.self.tile;
-            selfTile.classList.remove("screen");
-            selfTile.querySelector("video").srcObject = localStream;
-            setTileMedia(selfTile, audioOn, videoOn);
-            updateControlButtons();
-            broadcastMediaState();
-        }
-
-        // ==============================
-        // WEBRTC PEERS
-        // ==============================
-        function getOrCreatePeer(id, name, picture) {
-            let p = peers[id];
-            if (p && p.pc) {
-                if (name && name !== p.name) { p.name = name; setTileName(p.tile, name); }
-                if (picture) setTilePicture(p.tile, picture);
-                return p;
-            }
-
-            const pc = new RTCPeerConnection(RTC_CONFIG);
-            p = peers[id] = {
-                pc,
-                name: name || "Guest",
-                tile: createTile(id, name || "Guest", false, picture),
-                pendingIce: [],
-                remoteStream: new MediaStream()
-            };
-            p.tile.querySelector("video").srcObject = p.remoteStream;
-
-            pc.onicecandidate = (e) => {
-                if (e.candidate) send({ type: "ice", to: id, candidate: e.candidate });
-            };
-
-            // srcObject was set once above; resetting it per track restarts playback
-            pc.ontrack = (e) => {
-                p.remoteStream.addTrack(e.track);
-                playRemote(p.tile.querySelector("video"));
-            };
-
-            // One ICE restart before giving up: a network change or a NAT that
-            // dropped the path can often be fixed by gathering new candidates.
-            pc.oniceconnectionstatechange = () => {
-                if (pc.iceConnectionState !== "failed") return;
-                if (p.restarted) {
-                    toast("Couldn't connect to " + p.name + ". A TURN server may be needed.");
-                    return removePeer(id);
-                }
-                p.restarted = true;
-                if (p.isOfferer) {
-                    pc.restartIce();
-                    sendOffer(id, p).catch(err => console.error("ICE restart failed", err));
-                }
-            };
-
-            return p;
-        }
-
-        // Phones block audio that starts without a tap; offer a button instead of silence
-        function playRemote(video) {
-            video.play().catch(() => $("audioUnlock").classList.remove("hidden"));
-        }
-
-        function unlockAudio() {
-            $("audioUnlock").classList.add("hidden");
-            document.querySelectorAll(".tile:not(.self) video").forEach(playRemote);
-        }
-
-        // Closes a peer without telling the user (used for glare and reconnects)
-        function dropPeer(id) {
-            const p = peers[id];
-            if (!p || id === "self") return;
-            try { p.pc.close(); } catch (e) {}
-            p.tile.remove();
-            delete peers[id];
-            layoutGrid();
-        }
-
-        // Attach our outgoing tracks (or recv-only slots if we have no device).
-        // Runs once per connection: adding a track twice throws.
-        function addLocalTracks(p, isOfferer) {
-            if (p.tracksAdded) return;
-            p.tracksAdded = true;
-            const pc = p.pc;
-            const videoTrack = screenStream
-                ? screenStream.getVideoTracks()[0]
-                : (localStream ? localStream.getVideoTracks()[0] : null);
-            const audioTrack = localStream ? localStream.getAudioTracks()[0] : null;
-            const streamForTracks = localStream || new MediaStream();
-
-            if (audioTrack) pc.addTrack(audioTrack, streamForTracks);
-            else if (isOfferer) pc.addTransceiver("audio", { direction: "recvonly" });
-
-            if (videoTrack) pc.addTrack(videoTrack, streamForTracks);
-            else if (isOfferer) pc.addTransceiver("video", { direction: "recvonly" });
-        }
-
-        async function flushIce(p) {
-            while (p.pendingIce.length) {
-                const c = p.pendingIce.shift();
-                try { await p.pc.addIceCandidate(c); } catch (e) { console.warn("ICE error", e); }
+                send({ kind: "media",
+                       audio: enabled.audio && hasTrack("audio") ? 1 : 0,
+                       video: screenTrack || (enabled.video && hasTrack("video")) ? 1 : 0 });
+            } catch (error) {
+                console.error("Could not send media state:", error);
             }
         }
 
-        async function sendOffer(id, p) {
-            const offer = await p.pc.createOffer();
-            await p.pc.setLocalDescription(offer);
-            send({
-                type: "offer", to: id, name: myName, picture: myPicture, sdp: p.pc.localDescription,
-                audio: audioOn, video: videoOn || !!screenStream
-            });
-        }
-
-        // An existing participant calls the newcomer
-        async function callPeer(id, name, audio, video, picture) {
-            if (peers[id] && peers[id].pc) return; // already connected or connecting
-            const p = getOrCreatePeer(id, name, picture);
-            p.isOfferer = true;
-            setTileMedia(p.tile, audio, video);
-            addLocalTracks(p, true);
-            await sendOffer(id, p);
-        }
-
-        async function handleOffer(msg) {
-            const existing = peers[msg.from];
-            // Glare: both sides sent an offer at once. The lower ID keeps its
-            // offer; the higher ID drops its own and answers instead.
-            if (existing && existing.pc && existing.pc.signalingState === "have-local-offer") {
-                if (Number(myId) < Number(msg.from)) return;
-                dropPeer(msg.from);
-            }
-            const p = getOrCreatePeer(msg.from, msg.name, msg.picture);
-            setTileMedia(p.tile, msg.audio, msg.video);
-            await p.pc.setRemoteDescription(msg.sdp);
-            addLocalTracks(p, false);
-            await flushIce(p);
-            const answer = await p.pc.createAnswer();
-            await p.pc.setLocalDescription(answer);
-            send({
-                type: "answer", to: msg.from, name: myName, picture: myPicture, sdp: p.pc.localDescription,
-                audio: audioOn, video: videoOn || !!screenStream
-            });
-        }
-
-        async function handleAnswer(msg) {
-            const p = peers[msg.from];
-            if (!p || !p.pc) return;
-            if (msg.name) setTileName(p.tile, msg.name), p.name = msg.name;
-            if (msg.picture) setTilePicture(p.tile, msg.picture);
-            setTileMedia(p.tile, msg.audio, msg.video);
-            await p.pc.setRemoteDescription(msg.sdp);
-            await flushIce(p);
-        }
-
-        async function handleIce(msg) {
-            const p = peers[msg.from];
-            if (!p || !p.pc) return;
-            if (p.pc.remoteDescription) {
-                try { await p.pc.addIceCandidate(msg.candidate); } catch (e) { console.warn("ICE error", e); }
-            } else {
-                p.pendingIce.push(msg.candidate);
-            }
-        }
-
-        function removePeer(id) {
-            const p = peers[id];
-            if (!p || id === "self") return;
-            try { p.pc.close(); } catch (e) {}
-            p.tile.remove();
-            delete peers[id];
-            layoutGrid();
-            if (inCall) addSystemMessage(p.name + " left the call");
+        function setCall(event) {
+            call = Core.callTransition(call, event);
+            renderControls();
+            const chatReady = call === Core.CALL.IN_CALL;
+            chatInput.disabled = !chatReady;
+            chatSend.disabled = !chatReady || !chatInput.value.trim();
         }
 
         // ==============================
         // CHAT
         // ==============================
-        function addChatMessage(name, text, time, mine) {
-            const log = $("chatLog");
-            const el = document.createElement("div");
-            el.className = "msg";
+        function addChat(user, text, mine) {
+            chatLog.querySelector(".chat-empty")?.remove();
+            const entry = document.createElement("div");
+            entry.className = "msg" + (mine ? " mine" : "");
             const meta = document.createElement("div");
             meta.className = "meta";
-            meta.textContent = mine ? "You" : name;
-            const t = document.createElement("time");
-            t.textContent = formatTime(time);
-            meta.appendChild(t);
-            const body = document.createElement("div");
-            body.className = "text";
+            const name = document.createElement("strong");
+            name.textContent = mine ? "You" : user.name;
+            const time = document.createElement("time");
+            time.textContent = formatTime(Date.now());
+            meta.append(name, time);
+            const body = document.createElement("p");
+            body.className = "bubble";
             body.textContent = text;
-            el.appendChild(meta);
-            el.appendChild(body);
-            log.appendChild(el);
-            log.scrollTop = log.scrollHeight;
-
-            if (!mine && $("chatPanel").classList.contains("hidden")) {
-                setUnread(true);
-                toast(name + ": " + text);
+            const content = document.createElement("div");
+            content.append(meta, body);
+            entry.append(avatar(user, "chat-avatar"), content);
+            chatLog.appendChild(entry);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            if (!mine && !chatOpen()) {
+                chatToggle.classList.add("unread");
+                toast(user.name + ": " + text);
             }
         }
 
         function addSystemMessage(text) {
-            const log = $("chatLog");
-            const el = document.createElement("div");
-            el.className = "msg system";
-            el.textContent = text;
-            log.appendChild(el);
-            log.scrollTop = log.scrollHeight;
+            chatLog.querySelector(".chat-empty")?.remove();
+            const note = document.createElement("p");
+            note.className = "msg system";
+            note.textContent = text;
+            chatLog.appendChild(note);
+            chatLog.scrollTop = chatLog.scrollHeight;
         }
 
-        function setUnread(value) {
-            unread = value;
-            const btn = $("chatBtn");
-            let badge = btn.querySelector(".badge");
-            if (value && !badge) {
-                badge = document.createElement("span");
-                badge.className = "badge";
-                btn.appendChild(badge);
-            } else if (!value && badge) {
-                badge.remove();
+        function chatOpen() { return !app.classList.contains("chat-closed"); }
+
+        function setChatOpen(open) {
+            app.classList.toggle("chat-closed", !open);
+            chatToggle.setAttribute("aria-pressed", String(open));
+            chatToggle.classList.toggle("active", open);
+            if (open) {
+                chatToggle.classList.remove("unread");
+                if (!chatInput.disabled) chatInput.focus();
             }
-        }
-
-        function toggleChat(force) {
-            const panel = $("chatPanel");
-            const show = typeof force === "boolean" ? force : panel.classList.contains("hidden");
-            panel.classList.toggle("hidden", !show);
-            $("chatBtn").classList.toggle("active", show);
-            if (show) {
-                setUnread(false);
-                $("chatInput").focus();
-            }
-        }
-
-        function sendChat(e) {
-            e.preventDefault();
-            const input = $("chatInput");
-            const text = input.value.trim();
-            if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
-            const time = Date.now();
-            send({ type: "chat", name: myName, text, time });
-            addChatMessage(myName, text, time, true);
-            input.value = "";
-            $("chatSend").disabled = true;
         }
 
         // ==============================
-        // WEBSOCKET
+        // PARTICIPANTS AND PEERS
         // ==============================
-        // Every change to the connection status goes through here (see docs/state-machines.md)
-        function setConn(event) {
-            conn = Core.connTransition(conn, event);
-            renderConn();
+        function removeParticipant(id, announce) {
+            const participant = participants.get(id);
+            if (!participant) return;
+            participants.delete(id);
+            const current = participant.peer;
+            participant.peer = null;
+            if (current) current.close();
+            unmeter(participant.tile);
+            participant.tile.remove();
+            layoutGrid();
+            if (announce) addSystemMessage(participant.user.name + " left");
+            if (call === Core.CALL.IN_CALL) countStatus();
         }
 
-        function renderConn() {
-            const text = {
-                [Core.CONN.CONNECTING]: "Connecting to server...",
-                [Core.CONN.OPEN]: "Connected to " + wsUrl,
-                [Core.CONN.RECONNECTING]: "Connection lost. Reconnecting...",
-                [Core.CONN.CLOSED]: "Disconnected from server"
-            }[conn];
-            $("connStatus").textContent = text;
-            updateJoinButton();
+        function addParticipant(id, profile) {
+            if (participants.has(id)) return participants.get(id);
+            const user = Core.profileToUser(profile);
+            const { tile, video } = createTile(user);
+            const participant = { id, user, tile, video, peer: null, candidates: [], incoming: new MediaStream() };
+            video.srcObject = participant.incoming;
+            participants.set(id, participant);
+            countStatus();
+            return participant;
         }
 
-        function startHeartbeat() {
-            lastPong = Date.now();
-            clearInterval(pingTimer);
-            pingTimer = setInterval(() => {
-                // No pong for a minute: the socket is dead even if the browser hasn't noticed
-                if (Date.now() - lastPong > PONG_TIMEOUT_MS) return handleLost();
-                if (socket && socket.readyState === WebSocket.OPEN) socket.send("__ping__");
-            }, PING_MS);
+        // Phones block audio that starts without a tap; offer a button instead of silence
+        function playRemote(video) {
+            video.play().catch(() => { $("audio-unlock").hidden = false; });
         }
 
-        // The server forgot us, so drop every peer; they'll reconnect when we re-join
-        function handleLost() {
-            clearInterval(pingTimer);
-            if (socket) {
-                socket.onclose = socket.onmessage = socket.onerror = null;
-                try { socket.close(); } catch (e) {}
-            }
-            myId = null;
-            $("chatSend").disabled = true;
-            if (conn === Core.CONN.CLOSED) return;
-            if (conn !== Core.CONN.RECONNECTING) {
-                setConn("lost");
-                if (inCall) {
-                    Object.keys(peers).forEach(dropPeer);
-                    toast("Connection lost. Reconnecting...");
+        function send(data) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error("Signaling disconnected");
+            socket.send(JSON.stringify(data));
+        }
+
+        function sendSignal(id, data) {
+            const cid = Math.random().toString(36).slice(2, 10);
+            for (const part of Core.splitSignal(data, cid, CHUNK_SIZE)) send({ kind: "signal", target: id, data: part });
+        }
+
+        function createPeer(participant, answering = false) {
+            const current = new RTCPeerConnection({ iceServers });
+            participant.peer = current;
+            if (!answering) {
+                for (const kind of ["audio", "video"]) {
+                    current.addTransceiver(outgoingTrack(kind) || kind, { direction: "sendrecv", streams: [stream] });
                 }
             }
-            setTimeout(connect, Core.reconnectDelay(reconnectAttempt++));
-        }
-
-        function connect() {
-            if (conn === Core.CONN.CLOSED) return;
-            socket = new WebSocket(wsUrl);
-
-            socket.onopen = () => {
-                reconnectAttempt = 0;
-                setConn("opened");
-                startHeartbeat();
+            current.onicecandidate = event => {
+                if (participant.peer === current && event.candidate && socket && socket.readyState === WebSocket.OPEN) {
+                    sendSignal(participant.id, { type: "candidate", candidate: event.candidate });
+                }
             };
-
-            socket.onmessage = (event) => {
-                const data = String(event.data);
-
-                // Plain-text control messages from app.bzg
-                if (data === "__pong__") {
-                    lastPong = Date.now();
-                    return;
-                }
-                if (data.startsWith("__id__:")) {
-                    myId = data.slice(7).trim();
-                    updateJoinButton();
-                    if (inCall) enterRoom(); // reconnected mid-call: re-join with the new ID
-                    return;
-                }
-                if (data.startsWith("__left__:")) {
-                    removePeer(data.slice(9).trim());
-                    return;
-                }
-
-                let msg;
-                try { msg = JSON.parse(data); } catch (e) { return; }
-                if (!msg || !msg.type) return;
-                if (String(msg.from) === String(myId)) return;          // our own echo
-                if (msg.to !== undefined && String(msg.to) !== String(myId)) return; // not for us
-                if (!inCall) return;
-
-                if (msg.type === "chunk") {
-                    msg = collectChunk(msg);
-                    if (!msg) return;
-                }
-
-                // One message at a time, so an offer, its answer and ICE for the
-                // same peer never run interleaved
-                signalQueue = signalQueue
-                    .then(() => handleMessage(msg))
-                    .catch(err => console.error("Signaling error", err));
+            current.ontrack = event => {
+                if (participant.peer !== current) return;
+                participant.incoming.addTrack(event.track);
+                if (event.track.kind === "audio") meter(participant.tile, participant.incoming);
+                playRemote(participant.video);
             };
-
-            socket.onclose = handleLost;
+            current.onconnectionstatechange = () => {
+                if (participant.peer !== current) return;
+                if (current.connectionState === "connected") countStatus();
+                if (current.connectionState === "failed") toast(`Couldn't connect to ${participant.user.name}. A TURN server may be needed.`);
+            };
+            return current;
         }
 
-        // Tell the server our room, then announce ourselves to it
-        function enterRoom() {
-            if (!socket || socket.readyState !== WebSocket.OPEN) return;
-            socket.send("__room__:" + room);
-            send({ type: "join", name: myName, picture: myPicture, audio: audioOn, video: videoOn || !!screenStream });
-            $("chatSend").disabled = $("chatInput").value.trim().length === 0;
-        }
-
-        async function handleMessage(msg) {
-            const from = String(msg.from);
-            switch (msg.type) {
-                case "join":
-                    addSystemMessage(msg.name + " joined the call");
-                    toast(msg.name + " joined");
-                    await callPeer(from, msg.name, msg.audio, msg.video, msg.picture);
-                    break;
-                case "offer":
-                    await handleOffer(msg);
-                    break;
-                case "answer":
-                    await handleAnswer(msg);
-                    break;
-                case "ice":
-                    await handleIce(msg);
-                    break;
-                case "media":
-                    if (peers[from]) setTileMedia(peers[from].tile, msg.audio, msg.video);
-                    break;
-                case "chat":
-                    addChatMessage(msg.name, msg.text, msg.time || Date.now(), false);
-                    break;
-                case "leave":
-                    removePeer(from);
-                    break;
+        async function handleSignal(participant, data, myGeneration) {
+            if (data.type === "offer") {
+                const current = createPeer(participant, true);
+                await current.setRemoteDescription(data.description);
+                if (myGeneration !== generation || participant.peer !== current || !participants.has(participant.id)) return;
+                for (const transceiver of current.getTransceivers()) {
+                    const kind = transceiver.receiver.track.kind;
+                    transceiver.direction = "sendrecv";
+                    transceiver.sender.setStreams(stream);
+                    const track = outgoingTrack(kind);
+                    if (track) await transceiver.sender.replaceTrack(track);
+                }
+                for (const candidate of participant.candidates) await current.addIceCandidate(candidate);
+                participant.candidates = [];
+                const answer = await current.createAnswer();
+                await current.setLocalDescription(answer);
+                if (myGeneration === generation && participant.peer === current && participants.has(participant.id)) {
+                    sendSignal(participant.id, { type: "answer", description: current.localDescription });
+                }
+            } else if (data.type === "answer" && participant.peer) {
+                const current = participant.peer;
+                await current.setRemoteDescription(data.description);
+                if (myGeneration !== generation || participant.peer !== current || !participants.has(participant.id)) return;
+                for (const candidate of participant.candidates) await current.addIceCandidate(candidate);
+                participant.candidates = [];
+            } else if (data.type === "candidate") {
+                if (participant.peer && participant.peer.remoteDescription) await participant.peer.addIceCandidate(data.candidate);
+                else participant.candidates.push(data.candidate);
             }
         }
 
-        // ==============================
-        // GOOGLE SIGN-IN (OAuth 2.0 / OpenID Connect via Google Identity Services)
-        // ==============================
-        const CLIENT_ID = CONFIG.googleClientId || "";
-        const GITHUB_AUTH_URL = CONFIG.githubAuthUrl || "";
-        const SESSION_KEY = "jmeet.user";
-        const GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"];
-        const googleConfigured = () => !!CLIENT_ID && !CLIENT_ID.startsWith("YOUR_");
-        const currentUser = () => auth.status === Core.AUTH.SIGNED_IN ? auth.user : null;
-
-        // Decodes the payload of a Google ID token (a JWT: header.payload.signature)
-        function decodeJwt(token) {
-            const part = String(token).split(".")[1];
-            if (!part) throw new Error("Malformed token");
-            const b64 = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
-            const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-            return JSON.parse(new TextDecoder().decode(bytes));
-        }
-
-        // The Bonezegei server can't call Google to verify the signature, so the
-        // browser checks the claims that matter: audience, issuer and expiry.
-        function validateClaims(claims) {
-            if (claims.aud !== CLIENT_ID) throw new Error("Token was issued for a different app");
-            if (!GOOGLE_ISSUERS.includes(claims.iss)) throw new Error("Token was not issued by Google");
-            if (!claims.exp || claims.exp * 1000 <= Date.now()) throw new Error("Token has expired");
-            if (claims.email && claims.email_verified === false) throw new Error("Google email is not verified");
-        }
-
-        function handleCredential(response) {
-            try {
-                const claims = decodeJwt(response.credential);
-                validateClaims(claims);
-                if (currentUser()) setUser(null);
-                setUser({
-                    provider: "google",
-                    name: claims.name || claims.email,
-                    email: claims.email || "",
-                    picture: Core.isAllowedPicture(claims.picture) ? claims.picture : "",
-                    exp: claims.exp
-                });
-                toast("Signed in as " + (claims.name || claims.email));
-            } catch (e) {
-                console.error("Google sign-in failed", e);
-                $("authMsg").textContent = "Sign-in failed: " + e.message;
+        async function handleMessage(text, myGeneration) {
+            if (myGeneration !== generation) return;
+            const message = JSON.parse(text);
+            if (message.kind === "self") {
+                selfId = message.id;
+                selfUser = Core.profileToUser(message.user);
+                setLocalTile(selfUser);
+                setCall("connected");
+                countStatus();
+                addSystemMessage("You joined the call");
+                sendMediaState();
+                return;
             }
-        }
-
-        // Signing in or out always goes through Core.authTransition
-        function setUser(profile) {
-            auth = Core.authTransition(auth, profile ? { type: "signIn", user: profile } : { type: "signOut" });
-            try {
-                if (profile) sessionStorage.setItem(SESSION_KEY, JSON.stringify(profile));
-                else sessionStorage.removeItem(SESSION_KEY);
-            } catch (e) { /* storage blocked: stay signed in for this page only */ }
-            renderAuth();
-        }
-
-        function restoreUser() {
-            try {
-                const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
-                if (Core.isValidUser(saved)) auth = { status: Core.AUTH.SIGNED_IN, user: saved };
-                else sessionStorage.removeItem(SESSION_KEY);
-            } catch (e) { /* bad saved value: stay signed out */ }
-        }
-
-        // The GitHub helper (scripts/github-auth.js) sends the profile back in the URL hash
-        function readGitHubRedirect() {
-            const hash = location.hash;
-            if (!/[#&]auth(_error)?=/.test(hash)) return;
-            const result = Core.parseAuthFragment(hash);
-            if (result) {
-                if (currentUser()) setUser(null);
-                setUser(result.user);
-                if (result.room) room = result.room;
-                toast("Signed in as " + result.user.name);
-            } else {
-                const params = new URLSearchParams(hash.slice(1));
-                room = Core.roomFromHash(params.get("room")) || room;
-                $("authMsg").textContent = params.get("auth_error") === "denied"
-                    ? "GitHub sign-in was cancelled."
-                    : "GitHub sign-in failed. Please try again.";
+            if (message.kind === "left") {
+                removeParticipant(message.id, true);
+                return;
             }
-            history.replaceState(null, "", location.pathname + (room ? "#" + room : ""));
-        }
-
-        function signOut() {
-            const user = currentUser();
-            if (!user) return;
-            if (user.provider === "google" && window.google && google.accounts) google.accounts.id.disableAutoSelect();
-            setUser(null);
-        }
-
-        function renderAuth() {
-            const user = currentUser();
-            $("userChip").classList.toggle("hidden", !user);
-            $("googleBtn").classList.toggle("hidden", !!user);
-            $("githubBtn").classList.toggle("hidden", !!user || !GITHUB_AUTH_URL);
-            if (user) {
-                $("userName").textContent = user.name;
-                $("userEmail").textContent = user.email;
-                if (user.picture) $("userPic").src = user.picture;
-                else $("userPic").removeAttribute("src");
-                $("authMsg").textContent = "Signed in with " + (user.provider === "github" ? "GitHub" : "Google");
-            } else if (googleConfigured() || GITHUB_AUTH_URL) {
-                const names = [googleConfigured() && "Google", GITHUB_AUTH_URL && "GitHub"].filter(Boolean);
-                $("authMsg").textContent = "Sign in with " + names.join(" or ") + " to join.";
-            } else {
-                $("authMsg").textContent = "Sign-in is not configured. Copy public/config.example.js to " +
-                    "public/config.js and add your Google client ID or GitHub helper URL.";
+            if (message.kind === "existing" || message.kind === "joined") {
+                const participant = addParticipant(message.id, message.user);
+                if (message.kind === "joined") {
+                    addSystemMessage(participant.user.name + " joined");
+                    sendMediaState(); // so the newcomer sees our muted badge
+                    return;
+                }
+                const current = createPeer(participant);
+                const offer = await current.createOffer();
+                if (myGeneration !== generation || participant.peer !== current || !participants.has(message.id)) return;
+                await current.setLocalDescription(offer);
+                if (myGeneration === generation && participant.peer === current && participants.has(message.id)) {
+                    sendSignal(message.id, { type: "offer", description: current.localDescription });
+                }
+                return;
             }
-            updateJoinButton();
-        }
-
-        function updateJoinButton() {
-            $("joinBtn").disabled = !(currentUser() && myId && conn === Core.CONN.OPEN);
-        }
-
-        // The room goes along so the helper can send people back to it
-        function startGitHubSignIn(e) {
-            e.preventDefault();
-            const code = Core.normalizeRoomInput($("roomInput").value);
-            location.href = GITHUB_AUTH_URL + (code ? "?room=" + encodeURIComponent(code) : "");
-        }
-
-        function initGoogleSignIn() {
-            if (!googleConfigured()) return;
-            google.accounts.id.initialize({
-                client_id: CLIENT_ID,
-                callback: handleCredential,
-                auto_select: false,
-                cancel_on_tap_outside: true
-            });
-            google.accounts.id.renderButton($("googleBtn"), {
-                theme: "outline", size: "large", shape: "pill", text: "signin_with", width: 280
-            });
-        }
-
-        function loadGoogleSignIn() {
-            if (window.google && google.accounts && google.accounts.id) return initGoogleSignIn();
-            const script = $("gsiScript");
-            script.addEventListener("load", initGoogleSignIn);
-            script.addEventListener("error", () => {
-                $("authMsg").textContent = "Could not load Google sign-in. Check your internet connection.";
-            });
+            if (message.kind === "chat") {
+                const mine = message.from === selfId;
+                const user = mine ? selfUser : participants.get(message.from)?.user;
+                if (user && typeof message.text === "string" && message.text.length <= 1000) addChat(user, message.text, mine);
+                return;
+            }
+            if (message.kind === "media") {
+                const participant = participants.get(message.from);
+                if (participant) setTileMedia(participant.tile, !!message.audio, !!message.video);
+                return;
+            }
+            if (message.kind !== "signal") return;
+            const participant = participants.get(message.from);
+            if (!participant || !message.data) return;
+            const data = message.data.type === "chunk"
+                ? Core.collectChunk(chunks, message.from, message.data)
+                : message.data;
+            if (data) await handleSignal(participant, data, myGeneration);
         }
 
         // ==============================
         // JOIN / LEAVE
         // ==============================
-        async function initPreview() {
-            localStream = await getLocalMedia();
-            if (localStream) $("previewVideo").srcObject = localStream;
-            audioOn = hasTrack("audio");
-            videoOn = hasTrack("video");
-            updatePreviewMsg();
-            updateControlButtons();
-        }
-
-        function updatePreviewMsg() {
-            let text = "";
-            if (!localStream) {
-                text = window.isSecureContext
-                    ? "Camera and microphone are unavailable. You can still join and chat."
-                    : "The browser blocks the camera on plain http:// (except localhost). " +
-                      "You can still join, see others and chat.";
-            } else if (!hasTrack("video")) {
-                text = "Camera is unavailable (microphone only).";
-            } else if (!videoOn) {
-                text = "Camera is off";
+        function cleanup(message) {
+            generation++;
+            if (socket) {
+                socket.onclose = null;
+                socket.close();
             }
-            const msg = $("previewMsg");
-            msg.textContent = text;
-            msg.classList.toggle("hidden", !text);
+            socket = null;
+            for (const id of [...participants.keys()]) removeParticipant(id, false);
+            chunks.clear();
+            selfId = null;
+            if (screenTrack) screenTrack.stop();
+            screenTrack = null;
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            stream = null;
+            localVideo.srcObject = null;
+            unmeter(localTile);
+            clearInterval(speakerTimer);
+            if (audioContext) audioContext.close();
+            audioContext = null;
+            $("audio-unlock").hidden = true;
+            videoToggle.disabled = false;
+            audioToggle.disabled = false;
+            if (call !== Core.CALL.IDLE) setCall("end");
+            else renderControls();
+            setStatus(message);
+            document.title = "Jmeet";
         }
 
-        // ==============================
-        // ROOMS
-        // ==============================
-        const randomInt = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n;
-
-        function showRoomError(show) {
-            const input = $("roomInput");
-            $("roomError").classList.toggle("hidden", !show);
-            input.setAttribute("aria-invalid", show ? "true" : "false");
-            // Only point at the error while it's shown, so it isn't read out early
-            if (show) input.setAttribute("aria-describedby", "roomError");
-            else input.removeAttribute("aria-describedby");
-        }
-
-        function newRoom() {
-            $("roomInput").value = Core.makeRoomCode(randomInt);
-            showRoomError(false);
-        }
-
-        async function copyRoomLink() {
-            const link = location.origin + location.pathname + "#" + room;
+        join.addEventListener("click", async () => {
+            setCall("join");
+            videoToggle.disabled = true;
+            audioToggle.disabled = true;
+            const myGeneration = ++generation;
+            setStatus("Joining...");
             try {
-                await navigator.clipboard.writeText(link);
-                toast("Link copied");
-            } catch (e) {
-                toast("Copy failed. Share this link: " + link);
+                audioContext = new AudioContext();
+                const acquired = enabled.video || enabled.audio
+                    ? await navigator.mediaDevices.getUserMedia({ video: enabled.video, audio: enabled.audio })
+                    : new MediaStream();
+                if (myGeneration !== generation) {
+                    acquired.getTracks().forEach(track => track.stop());
+                    return;
+                }
+                stream = acquired;
+                localVideo.srcObject = stream;
+                meter(localTile, stream);
+                speakerTimer = setInterval(tickSpeaker, 250);
+                videoToggle.disabled = false;
+                audioToggle.disabled = false;
+                renderControls();
+                socket = new WebSocket(`${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/signal`);
+                socket.onmessage = event => {
+                    messages = messages.then(() => handleMessage(event.data, myGeneration)).catch(error => {
+                        console.error("WebRTC signaling error:", error);
+                        if (myGeneration === generation) cleanup("Signaling failed. Join again.");
+                    });
+                };
+                socket.onerror = () => setStatus("Could not reach the call server.");
+                socket.onclose = () => {
+                    if (myGeneration === generation) cleanup("Disconnected. The call may be full or your session expired.");
+                };
+                document.title = "In call | Jmeet";
+            } catch (error) {
+                console.error("Could not start call:", error);
+                if (myGeneration === generation) cleanup("Couldn't use your camera or microphone. Check the browser's permissions.");
+            }
+        });
+
+        leave.addEventListener("click", () => {
+            cleanup("You left the call");
+            addSystemMessage("You left the call");
+        });
+
+        async function toggleMedia(kind, button) {
+            const desired = !enabled[kind];
+            const myGeneration = generation;
+            let addedTrack = null;
+            button.disabled = true;
+            try {
+                if (stream) {
+                    let track = stream.getTracks().find(item => item.kind === kind);
+                    if (desired && !track) {
+                        const acquired = await navigator.mediaDevices.getUserMedia({ [kind]: true });
+                        if (myGeneration !== generation || !stream) {
+                            acquired.getTracks().forEach(item => item.stop());
+                            return;
+                        }
+                        track = acquired.getTracks()[0];
+                        if (!track) throw new Error(`No ${kind} track was returned`);
+                        stream.addTrack(track);
+                        addedTrack = track;
+                        for (const participant of participants.values()) {
+                            if (!participant.peer) continue;
+                            const transceiver = participant.peer.getTransceivers().find(item => item.receiver.track.kind === kind);
+                            if (transceiver && !(kind === "video" && screenTrack)) await transceiver.sender.replaceTrack(track);
+                        }
+                        if (kind === "audio") meter(localTile, stream);
+                        if (myGeneration !== generation) return;
+                    }
+                    if (track) track.enabled = desired;
+                }
+                enabled[kind] = desired;
+                renderControls();
+                sendMediaState();
+            } catch (error) {
+                if (addedTrack) {
+                    for (const participant of participants.values()) {
+                        if (!participant.peer) continue;
+                        const sender = participant.peer.getSenders().find(item => item.track === addedTrack);
+                        if (sender) {
+                            try { await sender.replaceTrack(null); }
+                            catch (rollbackError) { console.error("Could not remove failed media track:", rollbackError); }
+                        }
+                    }
+                    if (stream) stream.removeTrack(addedTrack);
+                    addedTrack.stop();
+                }
+                console.error(`Could not change ${kind}:`, error);
+                toast(`Couldn't turn on the ${kind === "video" ? "camera" : "microphone"}. Check the browser's permissions.`);
+            } finally {
+                if (myGeneration === generation) button.disabled = false;
             }
         }
 
-        function joinCall() {
-            const user = currentUser();
-            if (inCall || !user || !myId) return;
-            const code = Core.normalizeRoomInput($("roomInput").value);
-            if (!code) {
-                showRoomError(true);
-                return $("roomInput").focus();
+        async function replaceOutgoingVideo(track) {
+            for (const participant of participants.values()) {
+                const transceiver = participant.peer?.getTransceivers().find(item => item.receiver.track.kind === "video");
+                if (transceiver) await transceiver.sender.replaceTrack(track);
             }
-            if (user.exp * 1000 <= Date.now()) {
-                signOut();
-                return toast("Your sign-in expired. Please sign in again.");
-            }
-            room = code;
-            history.replaceState(null, "", location.pathname + "#" + room);
-            myName = user.name;
-            myPicture = user.picture;
-            inCall = true;
-
-            $("joinScreen").classList.add("hidden");
-            $("siteFooter").classList.add("hidden");
-            $("callScreen").classList.remove("hidden");
-            $("roomCode").textContent = room;
-            document.title = room + " | Jmeet";
-
-            // Our own tile
-            const selfTile = createTile("self", myName, true, myPicture);
-            selfTile.querySelector("video").srcObject = localStream;
-            peers.self = { tile: selfTile, name: myName };
-            setTileMedia(selfTile, audioOn, videoOn);
-            updateControlButtons();
-            $("chatSend").disabled = true;
-
-            addSystemMessage("You joined " + room);
-            enterRoom();
         }
 
-        function leaveCall() {
-            send({ type: "leave" });
-            inCall = false;
-            setConn("close");
-            clearInterval(pingTimer);
-            Object.keys(peers).forEach(id => { if (id !== "self") removePeer(id); });
-            if (screenStream) screenStream.getTracks().forEach(t => t.stop());
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
-            if (socket) { socket.onclose = null; socket.close(); }
-            const footer = $("siteFooter");
-            footer.classList.remove("hidden");
-            document.title = "You left | Jmeet";
-            // Reload keeps the #room hash, so Rejoin lands back in the same room
-            document.body.innerHTML =
-                '<main class="center-screen">' +
-                '<span class="brand">' + ICONS.logo + '<b>Jmeet</b></span>' +
-                '<h1>You left the meeting</h1>' +
-                '<button class="pill-btn" type="button" onclick="location.reload()">Rejoin</button>' +
-                '</main>';
-            document.body.appendChild(footer);
+        async function toggleShare() {
+            if (screenTrack) return stopShare();
+            let display;
+            try {
+                display = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            } catch (error) {
+                return; // picker cancelled
+            }
+            if (call !== Core.CALL.IN_CALL) return display.getTracks().forEach(track => track.stop());
+            screenTrack = display.getVideoTracks()[0];
+            screenTrack.onended = stopShare;
+            localVideo.srcObject = new MediaStream([screenTrack]);
+            await replaceOutgoingVideo(screenTrack);
+            renderControls();
+            sendMediaState();
+            toast("You're presenting to everyone");
         }
+
+        async function stopShare() {
+            if (!screenTrack) return;
+            screenTrack.onended = null;
+            screenTrack.stop();
+            screenTrack = null;
+            localVideo.srcObject = stream;
+            await replaceOutgoingVideo(outgoingTrack("video"));
+            renderControls();
+            sendMediaState();
+        }
+
+        // ==============================
+        // SIGN-IN (session cookie set by app.bzg after Google or GitHub OAuth)
+        // ==============================
+        function setAuth(event) {
+            auth = Core.authTransition(auth, event);
+            renderAuth();
+        }
+
+        function renderAuth() {
+            sessionStatus.hidden = auth.status !== Core.AUTH.CHECKING;
+            login.hidden = auth.status !== Core.AUTH.SIGNED_OUT;
+            app.hidden = auth.status !== Core.AUTH.SIGNED_IN;
+            document.body.classList.toggle("in-app", auth.status === Core.AUTH.SIGNED_IN);
+            switch (auth.status) {
+                case Core.AUTH.CHECKING:
+                    break;
+                case Core.AUTH.SIGNED_IN: {
+                    const identity = $("identity");
+                    const name = document.createElement("span");
+                    name.className = "identity-name";
+                    name.textContent = auth.user.name;
+                    identity.replaceChildren(avatar(auth.user, "chat-avatar"), name);
+                    identity.title = "Signed in as " + auth.user.name;
+                    setLocalTile(auth.user);
+                    break;
+                }
+                case Core.AUTH.SIGNED_OUT:
+                    document.title = "Sign in | Jmeet";
+                    chatLog.replaceChildren();
+                    break;
+                case Core.AUTH.FAILED: {
+                    const retry = document.createElement("button");
+                    retry.type = "button";
+                    retry.className = "text-btn";
+                    retry.textContent = "Try again";
+                    retry.addEventListener("click", () => { errorBox.hidden = true; setAuth({ type: "retry" }); checkSession(); });
+                    showError("Couldn't check your session. Is the server running? ");
+                    errorBox.append(retry);
+                    break;
+                }
+            }
+        }
+
+        async function checkSession() {
+            try {
+                const response = await fetch("/api/me", { cache: "no-store" });
+                if (response.status === 401) {
+                    if (call !== Core.CALL.IDLE) cleanup("Your session expired. Sign in again.");
+                    setAuth({ type: "unauthorized" });
+                    return;
+                }
+                if (!response.ok) throw new Error("Session request failed");
+                setAuth({ type: "ok", user: Core.profileToUser(await response.json()) });
+            } catch (error) {
+                console.error("Session check failed:", error);
+                // A failed background check while signed in keeps the call going
+                if (auth.status === Core.AUTH.CHECKING) setAuth({ type: "error" });
+            }
+        }
+
+        $("logout").addEventListener("click", async () => {
+            try {
+                const response = await fetch("/logout", { method: "POST" });
+                if (!response.ok) throw new Error("Logout failed");
+                cleanup("Not in the call");
+                errorBox.hidden = true;
+                setAuth({ type: "logout" });
+            } catch (error) {
+                console.error("Logout failed:", error);
+                showError("Couldn't log out. Try again.");
+            }
+        });
 
         // ==============================
         // THEME (System / Light / Dark)
@@ -1061,9 +800,20 @@
         function initTheme() {
             let saved = null;
             try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
-            document.querySelectorAll("[data-theme-choice]").forEach(btn => {
-                btn.setAttribute("aria-pressed", String(btn.dataset.themeChoice === Core.parseTheme(saved)));
-                btn.addEventListener("click", () => applyTheme(btn.dataset.themeChoice));
+            const current = Core.parseTheme(saved);
+            document.querySelectorAll("[data-theme-picker]").forEach(group => {
+                for (const choice of ["system", "light", "dark"]) {
+                    const label = choice.charAt(0).toUpperCase() + choice.slice(1);
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.dataset.themeChoice = choice;
+                    btn.setAttribute("aria-label", label);
+                    btn.title = label;
+                    btn.setAttribute("aria-pressed", String(choice === current));
+                    btn.innerHTML = THEME_ICONS[choice];
+                    btn.addEventListener("click", () => applyTheme(choice));
+                    group.append(btn);
+                }
             });
             // Another tab changed the theme
             window.addEventListener("storage", (e) => { if (e.key === THEME_KEY) applyTheme(e.newValue); });
@@ -1072,48 +822,50 @@
         // ==============================
         // WIRE UP UI
         // ==============================
-        $("joinBtn").addEventListener("click", joinCall);
-        $("signOutBtn").addEventListener("click", signOut);
-        $("githubBtn").addEventListener("click", startGitHubSignIn);
-        $("newRoomBtn").addEventListener("click", newRoom);
-        $("copyLinkBtn").addEventListener("click", copyRoomLink);
-        $("audioUnlock").addEventListener("click", unlockAudio);
-        $("roomInput").addEventListener("input", () => {
-            if ($("roomInput").getAttribute("aria-invalid") === "true" &&
-                Core.normalizeRoomInput($("roomInput").value)) showRoomError(false);
-        });
-        $("roomInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("joinBtn").disabled) joinCall(); });
-        $("micBtn").addEventListener("click", toggleMic);
-        $("camBtn").addEventListener("click", toggleCam);
-        $("previewMicBtn").addEventListener("click", toggleMic);
-        $("previewCamBtn").addEventListener("click", toggleCam);
-        $("shareBtn").addEventListener("click", toggleShare);
-        $("leaveBtn").addEventListener("click", leaveCall);
-        $("chatBtn").addEventListener("click", () => toggleChat());
-        $("chatClose").addEventListener("click", () => toggleChat(false));
-        $("chatForm").addEventListener("submit", sendChat);
-        $("chatInput").addEventListener("input", () => {
-            $("chatSend").disabled = $("chatInput").value.trim().length === 0;
-        });
-        window.addEventListener("beforeunload", () => { if (inCall) send({ type: "leave" }); });
+        document.querySelectorAll("[data-brand]").forEach(el => { el.innerHTML = ICONS.logo + "<b>Jmeet</b>"; });
+        document.querySelectorAll("[data-icon]").forEach(el => { el.innerHTML = ICONS[el.dataset.icon]; });
+        leave.innerHTML = ICONS.leave;
+        chatToggle.innerHTML = ICONS.chat;
 
-        $("brand").innerHTML = ICONS.logo + "<b>Jmeet</b>";
-        $("shareBtn").innerHTML = ICONS.share;
-        $("leaveBtn").innerHTML = ICONS.leave;
-        $("chatBtn").innerHTML = ICONS.chat;
-        updateControlButtons();
+        videoToggle.addEventListener("click", () => toggleMedia("video", videoToggle));
+        audioToggle.addEventListener("click", () => toggleMedia("audio", audioToggle));
+        shareToggle.addEventListener("click", toggleShare);
+        chatToggle.addEventListener("click", () => setChatOpen(!chatOpen()));
+        $("chat-close").addEventListener("click", () => setChatOpen(false));
+        $("audio-unlock").addEventListener("click", () => {
+            $("audio-unlock").hidden = true;
+            participants.forEach(p => playRemote(p.video));
+        });
+        chatInput.addEventListener("input", () => {
+            chatSend.disabled = chatInput.disabled || !chatInput.value.trim();
+        });
+        $("chat-form").addEventListener("submit", event => {
+            event.preventDefault();
+            const text = chatInput.value.trim();
+            if (!text || call !== Core.CALL.IN_CALL) return;
+            if (new TextEncoder().encode(text).length > 1000) return toast("Messages can be at most 1000 bytes.");
+            try {
+                send({ kind: "chat", text });
+                chatInput.value = "";
+                chatSend.disabled = true;
+            } catch (error) {
+                console.error("Could not send chat message:", error);
+                toast("Couldn't send that. Rejoin the call and try again.");
+            }
+        });
+        window.addEventListener("beforeunload", () => { if (call !== Core.CALL.IDLE) cleanup("Call ended"); });
+
+        function updateClock() { $("clock").textContent = formatTime(Date.now()); }
         updateClock();
         setInterval(updateClock, 15000);
 
+        // The chat starts closed on phones, where it covers the call
+        setChatOpen(!matchMedia("(max-width: 800px)").matches);
         initTheme();
-        room = Core.roomFromHash(location.hash);
-        restoreUser();
-        readGitHubRedirect();
-        $("roomInput").value = room;
+        renderControls();
         renderAuth();
-        loadGoogleSignIn();
-        initPreview();
-        connect();
+        checkSession();
+        setInterval(() => { if (auth.status === Core.AUTH.SIGNED_IN) checkSession(); }, 60000);
     </script>
 </body>
 </html>

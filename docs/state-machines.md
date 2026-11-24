@@ -2,37 +2,41 @@
 
 Each machine has one status field and one transition function. Nothing else changes the status. Both live in [`public/jmeet-core.js`](../public/jmeet-core.js) and are tested in [`scripts/jmeet-core.test.js`](../scripts/jmeet-core.test.js).
 
-## Connection
-
-The WebSocket link to `app.bzg`. Owner: `connTransition(state, event)`, used by `setConn()` in `public/index.html`.
-
-| State | Event | Next state |
-|---|---|---|
-| `connecting` | `opened` | `open` |
-| `connecting` | `lost` | `reconnecting` |
-| `connecting` | `close` | `closed` |
-| `open` | `lost` | `reconnecting` |
-| `open` | `close` | `closed` |
-| `reconnecting` | `opened` | `open` |
-| `reconnecting` | `close` | `closed` |
-| `closed` | (none) | |
-
-- `lost` fires when the socket closes or no `__pong__` arrives for 60 s. While `reconnecting`, the page retries after `reconnectDelay(attempt)`: 1, 2, 4, 8, then every 15 s.
-- `close` fires only when the user clicks Leave.
-- **Join now** is enabled only in `open`, with a signed-in user and a client ID from the server.
-- Any other pair throws, for example `closed` + `opened`.
-
 ## Sign-in
 
-Who is using the page. Owner: `authTransition(state, event)`, used by `setUser()` in `public/index.html`.
+Who is using the page, as told by `GET /api/me` (the `bsl_session` cookie that `app.bzg` sets after Google or GitHub sign-in). Owner: `authTransition(state, event)`, used by `setAuth()` in `public/index.html`.
 
-States: `{ status: "signedOut" }` or `{ status: "signedIn", user }`, where `user` is `{ provider: "google" | "github", name, email, picture, exp }`. The user only exists in `signedIn`.
+States: `{ status: "checking" }`, `{ status: "signedIn", user }`, `{ status: "signedOut" }` or `{ status: "failed" }`. `user` is `{ name, picture }` from `profileToUser()` and only exists in `signedIn`.
 
 | State | Event | Next state |
 |---|---|---|
-| `signedOut` | `signIn` (valid user) | `signedIn` |
-| `signedIn` | `signOut` | `signedOut` |
+| `checking` | `ok` (with a user) | `signedIn` |
+| `checking` | `unauthorized` (401) | `signedOut` |
+| `checking` | `error` (network or 5xx) | `failed` |
+| `signedIn` | `ok` (with a user) | `signedIn` (profile refreshed) |
+| `signedIn` | `unauthorized` | `signedOut` |
+| `signedIn` | `logout` | `signedOut` |
+| `failed` | `retry` | `checking` |
+| `signedOut` | (none) | |
 
-- `signIn` with an unknown provider, an empty name or a past `exp` throws.
-- `signIn` while already signed in throws, so switching accounts signs out first.
-- A user restored from `sessionStorage` must pass `isValidUser()`, or the page stays signed out.
+- The page checks once on load, then every 60 s while signed in. A failed background check sends no event, so a network blip doesn't end the call.
+- Signing in leaves the page (`/login/google` or `/login/github`) and comes back to `checking`, so `signedOut` needs no outgoing event.
+- Each state has its own view: `#session-status`, `#app`, `#login`, and the `#error` banner with a Try again button.
+- Any other pair throws, for example `signedOut` + `logout`.
+
+## Call
+
+Whether this tab is in the call. Owner: `callTransition(state, event)`, used by `setCall()` in `public/index.html`.
+
+| State | Event | Next state |
+|---|---|---|
+| `idle` | `join` | `joining` |
+| `joining` | `connected` | `inCall` |
+| `joining` | `end` | `idle` |
+| `inCall` | `end` | `idle` |
+
+- `join` fires on the Join call button, before the camera prompt.
+- `connected` fires when `app.bzg` sends `{kind: "self"}` over `/signal`.
+- `end` fires on Leave call, Log out, an expired session, a closed socket or a signaling error (`cleanup()`).
+- Chat input and the Present button only work in `inCall`. Join shows in `idle`, Leave in the other two.
+- Any other pair throws, for example `idle` + `end`.

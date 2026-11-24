@@ -1,122 +1,119 @@
-// Pure logic shared by the page and the node:test tests: room codes,
-// the connection and sign-in state machines, and input parsing.
+// Pure logic shared by the page and the node:test tests: the sign-in and
+// call state machines, profile parsing, grid sizing and signal chunking.
 (function (root) {
     // ==============================
-    // ROOM CODES (Meet-style abc-defg-hij)
+    // SIGN-IN STATE MACHINE (see docs/state-machines.md)
     // ==============================
-    const ROOM_RE = /^[a-z]{3}-[a-z]{4}-[a-z]{3}$/;
-    const LETTERS = "abcdefghijklmnopqrstuvwxyz";
-
-    function isRoomCode(code) {
-        return typeof code === "string" && ROOM_RE.test(code);
-    }
-
-    // randomInt(n) returns 0..n-1; injectable so tests are deterministic
-    function makeRoomCode(randomInt) {
-        const pick = (n) => Array.from({ length: n }, () => LETTERS[randomInt(LETTERS.length)]).join("");
-        return pick(3) + "-" + pick(4) + "-" + pick(3);
-    }
-
-    // Accepts what people paste: a bare code, "ABC-DEFG-HIJ" or a full link
-    function normalizeRoomInput(text) {
-        const match = String(text || "").trim().toLowerCase().match(/[a-z]{3}-[a-z]{4}-[a-z]{3}/);
-        return match ? match[0] : "";
-    }
-
-    function roomFromHash(hash) {
-        const code = String(hash || "").replace(/^#/, "");
-        return isRoomCode(code) ? code : "";
-    }
-
-    // ==============================
-    // CONNECTION STATE MACHINE (see docs/state-machines.md)
-    // ==============================
-    const CONN = Object.freeze({
-        CONNECTING: "connecting",
-        OPEN: "open",
-        RECONNECTING: "reconnecting",
-        CLOSED: "closed"
+    const AUTH = Object.freeze({
+        CHECKING: "checking",
+        SIGNED_IN: "signedIn",
+        SIGNED_OUT: "signedOut",
+        FAILED: "failed"
     });
 
-    const CONN_TRANSITIONS = Object.freeze({
-        connecting: { opened: CONN.OPEN, lost: CONN.RECONNECTING, close: CONN.CLOSED },
-        open: { lost: CONN.RECONNECTING, close: CONN.CLOSED },
-        reconnecting: { opened: CONN.OPEN, close: CONN.CLOSED },
-        closed: {}
+    // state: { status: "checking" | "signedOut" | "failed" } | { status: "signedIn", user }
+    // event: { type: "ok", user } | { type: "unauthorized" | "error" | "logout" | "retry" }
+    function authTransition(state, event) {
+        const from = state.status;
+        const type = event.type;
+        if (type === "ok" && (from === AUTH.CHECKING || from === AUTH.SIGNED_IN)) {
+            if (!event.user || !event.user.name) throw new Error("Invalid user profile");
+            return { status: AUTH.SIGNED_IN, user: event.user };
+        }
+        if (type === "unauthorized" && (from === AUTH.CHECKING || from === AUTH.SIGNED_IN)) {
+            return { status: AUTH.SIGNED_OUT };
+        }
+        if (type === "error" && from === AUTH.CHECKING) return { status: AUTH.FAILED };
+        if (type === "logout" && from === AUTH.SIGNED_IN) return { status: AUTH.SIGNED_OUT };
+        if (type === "retry" && from === AUTH.FAILED) return { status: AUTH.CHECKING };
+        throw new Error(`Invalid sign-in transition: ${from} + ${type}`);
+    }
+
+    // ==============================
+    // CALL STATE MACHINE
+    // ==============================
+    const CALL = Object.freeze({ IDLE: "idle", JOINING: "joining", IN_CALL: "inCall" });
+
+    const CALL_TRANSITIONS = Object.freeze({
+        idle: { join: CALL.JOINING },
+        joining: { connected: CALL.IN_CALL, end: CALL.IDLE },
+        inCall: { end: CALL.IDLE }
     });
 
-    function connTransition(state, event) {
-        const next = (CONN_TRANSITIONS[state] || {})[event];
-        if (!next) throw new Error(`Invalid connection transition: ${state} + ${event}`);
+    function callTransition(state, event) {
+        const next = (CALL_TRANSITIONS[state] || {})[event];
+        if (!next) throw new Error(`Invalid call transition: ${state} + ${event}`);
         return next;
     }
 
-    // 1 s, 2 s, 4 s, 8 s, then every 15 s
-    function reconnectDelay(attempt) {
-        return Math.min(1000 * 2 ** attempt, 15000);
-    }
-
     // ==============================
-    // SIGN-IN STATE MACHINE
+    // PROFILES
     // ==============================
-    const AUTH = Object.freeze({ SIGNED_OUT: "signedOut", SIGNED_IN: "signedIn" });
-    const PROVIDERS = Object.freeze(["google", "github"]);
-
-    // state: { status: "signedOut" } | { status: "signedIn", user }
-    function authTransition(state, event) {
-        if (event.type === "signIn" && state.status === AUTH.SIGNED_OUT) {
-            if (!isValidUser(event.user)) throw new Error("Invalid user profile");
-            return { status: AUTH.SIGNED_IN, user: event.user };
-        }
-        if (event.type === "signOut" && state.status === AUTH.SIGNED_IN) {
-            return { status: AUTH.SIGNED_OUT };
-        }
-        throw new Error(`Invalid sign-in transition: ${state.status} + ${event.type}`);
-    }
-
-    function isValidUser(user, now) {
-        return !!user
-            && PROVIDERS.includes(user.provider)
-            && typeof user.name === "string" && user.name.length > 0
-            && typeof user.exp === "number" && user.exp * 1000 > (now || Date.now());
-    }
-
     // Only Google and GitHub avatars are shown, so a peer can't make every
-    // browser in the room load an arbitrary URL.
+    // browser in the call load an arbitrary URL.
     function isAllowedPicture(url) {
         try {
             const u = new URL(url);
-            return u.protocol === "https:" && (u.hostname.endsWith(".googleusercontent.com")
-                || u.hostname === "avatars.githubusercontent.com");
+            const host = u.hostname.toLowerCase();
+            return u.protocol === "https:" && (host.endsWith(".googleusercontent.com")
+                || host === "avatars.githubusercontent.com");
         } catch (e) {
             return false;
         }
     }
 
-    function base64UrlDecode(part) {
-        const b64 = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
-        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        return new TextDecoder().decode(bytes);
+    const text = (value) => typeof value === "string" ? value.trim() : "";
+
+    // Google's userinfo has name/picture, GitHub's has login/avatar_url
+    function profileToUser(profile) {
+        const p = profile || {};
+        const name = text(p.name) || text(p.login) || text(p.email) || "Participant";
+        const picture = [p.picture, p.avatar_url].find(isAllowedPicture) || "";
+        return { name, picture };
     }
 
-    // The gateway redirects back from GitHub to "#auth=<base64url JSON>&room=<code>"
-    function parseAuthFragment(hash, now) {
-        const params = new URLSearchParams(String(hash || "").replace(/^#/, ""));
-        const auth = params.get("auth");
-        if (!auth) return null;
-        let user;
-        try { user = JSON.parse(base64UrlDecode(auth)); } catch (e) { return null; }
-        if (!user || user.provider !== "github" || !isValidUser(user, now)) return null;
-        return {
-            user: {
-                provider: "github",
-                name: user.name,
-                email: typeof user.email === "string" ? user.email : "",
-                picture: isAllowedPicture(user.picture) ? user.picture : "",
-                exp: user.exp
-            },
-            room: roomFromHash(params.get("room"))
-        };
+    function initialOf(name) {
+        return (text(name).charAt(0) || "?").toUpperCase();
+    }
+
+    // ==============================
+    // VIDEO GRID
+    // ==============================
+    // Columns for n tiles: 1, 2x2 up to 4, then 3 wide (8 people = 3+3+2)
+    function gridColumns(n) {
+        return n <= 1 ? 1 : n <= 4 ? 2 : 3;
+    }
+
+    // ==============================
+    // SIGNAL CHUNKING
+    // ==============================
+    // Big WebRTC offers can exceed what the native http.dll handles in one
+    // WebSocket frame, so signals over `size` characters go as numbered parts.
+    function splitSignal(data, cid, size) {
+        const json = JSON.stringify(data);
+        if (json.length <= size) return [data];
+        const n = Math.ceil(json.length / size);
+        return Array.from({ length: n }, (_, i) =>
+            ({ type: "chunk", cid, i, n, part: json.slice(i * size, (i + 1) * size) }));
+    }
+
+    // store: a Map kept by the caller. Returns the whole signal once every
+    // part from that sender has arrived, else null.
+    function collectChunk(store, from, chunk) {
+        const ok = chunk && typeof chunk.cid === "string" && Number.isInteger(chunk.i)
+            && Number.isInteger(chunk.n) && chunk.n > 0 && chunk.n <= 64
+            && chunk.i >= 0 && chunk.i < chunk.n && typeof chunk.part === "string";
+        if (!ok) return null;
+        const key = from + ":" + chunk.cid;
+        const entry = store.get(key) || { parts: [], received: 0 };
+        store.set(key, entry);
+        if (entry.parts[chunk.i] === undefined) {
+            entry.parts[chunk.i] = chunk.part;
+            entry.received++;
+        }
+        if (entry.received < chunk.n) return null;
+        store.delete(key);
+        try { return JSON.parse(entry.parts.join("")); } catch (e) { return null; }
     }
 
     // ==============================
@@ -128,9 +125,11 @@
     }
 
     const api = {
-        isRoomCode, makeRoomCode, normalizeRoomInput, roomFromHash,
-        CONN, connTransition, reconnectDelay,
-        AUTH, authTransition, isValidUser, isAllowedPicture, parseAuthFragment,
+        AUTH, authTransition,
+        CALL, callTransition,
+        isAllowedPicture, profileToUser, initialOf,
+        gridColumns,
+        splitSignal, collectChunk,
         parseTheme
     };
 
