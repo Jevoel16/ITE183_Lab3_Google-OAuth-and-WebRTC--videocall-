@@ -1,41 +1,32 @@
 # Troubleshooting
 
+## Server
+
+| Problem | Fix |
+|---|---|
+| `TLS setup failed; the video call server was not started.` | `cert/cert.pem` or `cert/key.pem` is missing or the pair doesn't match. Make them again (see [setup.md](setup.md#3-certificate)) |
+| `include("config.bzg")` fails | Copy `config.example.bzg` to `config.bzg` |
+| `enableTLS` is unknown | `lib/` is from an old `http` package. Delete `lib/` and run `bzg install` |
+| Port 443 already in use | Find it with `Get-NetTCPConnection -LocalPort 443` and stop that process (IIS, Skype or another `bzg run`) |
+| `openssl` fails with "subject name is expected to be in the format /type0=value0..." | Git Bash rewrote `/CN=localhost` as a path. Put `MSYS_NO_PATHCONV=1` in front of the command |
+
 ## Sign-in
 
 | Problem | Fix |
 |---|---|
-| `Error 400: origin_mismatch` or "The given origin is not allowed" | Add `http://localhost:8001`, `http://localhost:8000` and `http://localhost` to the client's Authorized JavaScript origins, then wait a few minutes |
-| `origin_mismatch` on the tunnel address | Add the current `https://….trycloudflare.com` address to the Authorized JavaScript origins; it changes on every run |
-| `Error 403: access_denied` | The app is in Testing mode: add the account under OAuth consent screen → Test users |
-| "Sign-in is not configured" | Set `GOOGLE_CLIENT_ID` in `.env` and run `npm run config` |
-| "Sign-in failed: Token was issued for a different app" | The client ID in `config.js` doesn't match the one the token was issued for |
-| Google button doesn't appear | Check your internet connection, and turn off ad or tracker blockers for `accounts.google.com` |
-| Sign-in fails on `http://127.0.0.1:8001` or a LAN IP | Use `http://localhost:8001`. Google only allows the origins you registered, and browsers block the camera on plain HTTP except on localhost |
-| No GitHub button | Set `GITHUB_CLIENT_ID` in `.env` and run `npm run config` |
-| "GitHub sign-in isn't set up" | Add the GitHub keys to `.env` and restart `npm run dev` |
-| GitHub sign-in: "Missing in .env: ..." | Copy the Local block of `.env.example` into `.env` and fill in the GitHub keys |
-| GitHub sign-in: `redirect_uri` mismatch | The callback URL on GitHub doesn't match the address you opened. Use `http://localhost:8001/auth/github/callback` locally and `https://trycloudflare.com/auth/github/callback` while sharing |
-| GitHub sign-in from `localhost:8000` shows a 404 | The sign-in routes live on the gateway. Use `http://localhost:8001` |
-| GitHub sign-in: "Open Jmeet on http://localhost:8001 or its trycloudflare.com address" | The gateway only sends GitHub back to localhost or a quick tunnel, so a LAN IP or other hostname is refused |
-| `npm run config`: "Set GOOGLE_CLIENT_ID or the GitHub keys" | `.env` is missing or still has `YOUR_...` placeholders; `config.js` was left as it was |
+| Browser says "Your connection is not private" | Expected with a self-signed certificate. Advanced > Proceed |
+| `Error 400: redirect_uri_mismatch` (Google) | Add `<baseUrl>/google-callback` exactly as in `config.bzg` to the client's Authorized redirect URIs |
+| `Error 403: access_denied` (Google) | The app is in Testing mode: add the account under OAuth consent screen > Test users |
+| GitHub: "The redirect_uri is not associated with this application" | The callback URL on GitHub must match `githubRedirectUri` |
+| "Invalid or expired OAuth state." | The sign-in took too long or was opened in another browser. Start again from the login page |
+| "Could not exchange the authorization code." | Wrong client secret in `config.bzg` |
+| Back on the login page right after signing in | The address doesn't match `baseUrl` (for example `127.0.0.1` vs `localhost`), so the cookie or `Origin` check fails. Open exactly `baseUrl` |
 
 ## Calls
 
 | Problem | Fix |
 |---|---|
-| Camera preview is blank | Allow camera and microphone in the browser, and close other apps using the camera |
-| One person hears the other but not the other way round | Add a TURN server (see [setup.md](setup.md#turn-server)) |
+| "Couldn't use your camera or microphone" | Allow both in the browser's site settings, and close other apps using the camera |
+| "Disconnected. The call may be full or your session expired." | More than 8 people, or the one-hour session ended. Reload and sign in |
+| "Couldn't connect to …. A TURN server may be needed." | The two networks block direct connections. Try the same Wi-Fi |
 | "Tap to hear the call" button | The phone blocked audio until a tap. Tap it once |
-| "Disconnected from server" or "Reconnecting..." that never ends | Make sure `npm run dev` is running from the project root |
-
-## Servers and tunnel
-
-| Problem | Fix |
-|---|---|
-| "The app server on port 8000 isn't running" | The gateway is up but Bonezegei isn't. Stop it and start both with `npm run dev` |
-| `npm run dev` stops with "Port 8001 is already in use" | An old gateway, tunnel or `bzg run` is still running. Find it with `Get-NetTCPConnection -LocalPort 8001` and stop it |
-| Port 8000 already in use | Find the process with `Get-NetTCPConnection -LocalPort 8000` and stop it |
-| Tunnel page loads but says "Could not reach wss://…" | Use `npm run share`, or start the app (`npm run dev`) before `npm run tunnel` |
-| `[tunnel] cloudflared isn't installed or isn't on PATH` | Run `winget install Cloudflare.cloudflared` and open a new terminal |
-| Every tunnel address returns an empty 404 | cloudflared is loading `%USERPROFILE%\.cloudflared\config.yml`. Start the tunnel with `--config NUL` (`npm run share` does) |
-| Tunnel address doesn't resolve right away | New addresses take up to a minute. If it still fails, run `ipconfig /flushdns` |

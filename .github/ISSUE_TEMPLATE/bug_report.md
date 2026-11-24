@@ -18,7 +18,7 @@ labels: bug
 
 - Version or commit:
 - Browser and OS:
-- Started with: `npm run dev` / `npm run share` / `npm start`
+- Started with: `bzg run` / `npm start`
 - Signed in with: Google / GitHub
 
 ## Logs

@@ -8,6 +8,6 @@ Thanks for taking a look. Jmeet is a school project, so changes are small and re
 4. Run `npm test` and the [manual checklist](docs/testing.md#manual-checklist) before opening a pull request.
 5. Update the README and `docs/` with every change.
 
-Every key belongs in `.env`. Never commit it, and never put a secret in `public/config.js`.
+Every key belongs in `config.bzg` and the certificate in `cert/`. Both are gitignored: never commit them, not even once, because they stay in the history.
 
 By contributing you agree that your changes fall under the project's [LICENSE](LICENSE).
