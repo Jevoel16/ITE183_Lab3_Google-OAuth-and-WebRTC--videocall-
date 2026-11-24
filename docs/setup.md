@@ -76,4 +76,6 @@ The host PC runs the server and teammates open its LAN address, for example `htt
 2. Set `baseUrl` and both redirect URIs in `config.bzg` to that address, add the GitHub callback for it, and restart.
 3. Allow Bonezegei through Windows Firewall on private networks when Windows asks.
 
+With `baseUrl` on the LAN IP, everyone signs in with GitHub, the host included: `baseUrl` is one address, so the host opens the LAN IP too. Google sign-in only works while `baseUrl` is `https://localhost`.
+
 Google rejects redirect URIs on a bare IP address (only `localhost` is allowed), so Google sign-in won't work on the LAN IP. A domain that points at the IP, such as `192-168-254-103.nip.io`, gets around that. Use it everywhere (certificate `DNS:` entry, `baseUrl`, both redirect URIs). GitHub sign-in accepts the LAN IP as it is.
