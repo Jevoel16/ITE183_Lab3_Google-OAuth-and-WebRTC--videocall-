@@ -1,16 +1,11 @@
 {
   "name": "ite183-lab3-google-oauth-webrtc",
   "version": "1.2.1",
-  "description": "Jmeet: Google OAuth sign-in and WebRTC video calls on a Bonezegei WebSocket server",
+  "description": "Jmeet: Google and GitHub OAuth sign-in and WebRTC group video calls on a Bonezegei HTTPS server",
   "main": "app.bzg",
   "scripts": {
     "start": "bonezegei app.bzg",
-    "test": "node scripts/check-syntax.js && node --test \"scripts/*.test.js\"",
-    "config": "node --env-file-if-exists=.env scripts/write-config.js",
-    "gateway": "node --env-file-if-exists=.env scripts/gateway.js",
-    "dev": "node --env-file-if-exists=.env scripts/run.js dev",
-    "share": "node --env-file-if-exists=.env scripts/run.js share",
-    "tunnel": "node scripts/run.js tunnel"
+    "test": "node scripts/check-syntax.js && node --test \"scripts/*.test.js\""
   },
   "dependencies": {
     "http": "^1.0.0"

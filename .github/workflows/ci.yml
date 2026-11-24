@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # No npm dependencies or lockfile: the "http" module is a Bonezegei
-      # native DLL vendored in lib/, so there's nothing to install.
+      # native DLL from bzg install (Windows only), so CI only runs the JS checks.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc

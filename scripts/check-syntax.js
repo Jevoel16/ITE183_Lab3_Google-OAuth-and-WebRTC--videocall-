@@ -21,10 +21,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 // Compile without running, so browser globals don't matter.
 const compile = (code, file) => new vm.Script(code, { filename: file });
 
-// lib/ is the vendored Bonezegei module and is left as shipped.
+// lib/ comes from bzg install and is left as shipped.
 check("package.json", () => JSON.parse(read("package.json")));
-
-check("public/config.example.js", () => compile(read("public/config.example.js"), "config.example.js"));
 
 // Inline <script> blocks only; external ones (src=...) are skipped.
 for (const file of ["public/index.html", "public/404.html"]) {
