@@ -1,14 +1,22 @@
-# Local commit message draft
-commit-msg.txt
+# Sensitive credentials and OAuth secrets
+config.bzg
+
+# Local SSL/TLS certificates and private keys
+cert/
+*.pem
+*.key
+
+# OS and editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
 
 # Local Claude settings and personal instructions
 .claude/
 CLAUDE.md
 
-# Local Google OAuth client ID (copy public/config.example.js)
-public/config.js
-
-# Local secrets (GitHub OAuth client secret)
+# Leftovers from the old Node setup (secrets, generated config, message draft)
 .env
 .env.*
-!.env.example
+public/config.js
+commit-msg.txt
