@@ -1,104 +1,226 @@
 include("lib/http.bzg");
+include("config.bzg");
 
-var server = http(8000);
+var server = http(443, 16, 8, 0, 16);
+var maxParticipants = 8;
+var participantSessions = [null, null, null, null, null, null, null, null];
+var participantInfo = [null, null, null, null, null, null, null, null];
 
-// rooms[clientId] = the room code that client is in ("" = none yet).
-// Bonezegei arrays only take numeric indexes and error past the end,
-// so maxId tracks the highest index ever written.
-var rooms = [];
-var maxId = -1;
-
-// Room codes look like abc-defg-hij (12 characters, checked by the browser)
-var ROOM_PREFIX = "__room__:";
-var ROOM_CODE_LENGTH = 12;
-
-var setRoom = function (clientId, room) {
-    while (maxId < clientId) {
-        maxId = maxId + 1;
-        rooms[maxId] = "";
+function isSuccess(response) {
+    if (response == null) {
+        return false;
     }
-    rooms[clientId] = room;
-};
+    return substr(response, 0, 5) == "HTTP/" && substr(response, 9, 3) == "200";
+}
 
-// Send to everyone in the same room as the sender, including the sender
-// (the browser drops its own echo).
-var sendToRoom = function (room, message) {
-    if (room == "") {
-        return 0;
+function finishLogin(tokenUrl, clientId, clientSecret, redirectUri, profileUrl) {
+    if (server.oauthValidateState() != 1) {
+        server.sendResponse("Invalid or expired OAuth state.", "text/plain", 400);
+        return;
     }
-    for (var i = 0; i <= maxId; i = i + 1) {
-        if (rooms[i] == room) {
-            server.send(i, message);
+    var code = server.getQuery("code");
+    if (code == null) {
+        server.sendResponse("Authorization was denied or no code was returned.", "text/plain", 400);
+        return;
+    }
+    var response = server.oauthExchangeCode(tokenUrl, clientId, clientSecret, redirectUri, code);
+    if (!isSuccess(response)) {
+        server.sendResponse("Could not exchange the authorization code.", "text/plain", 502);
+        return;
+    }
+    var token = server.oauthGetAccessToken(server.getResponseBody(response));
+    if (token == null) {
+        server.sendResponse("The provider did not return an access token.", "text/plain", 502);
+        return;
+    }
+    var headers = "Authorization: Bearer " + token + "\r\nAccept: application/json\r\n";
+    var profileResponse = server.requestGET(profileUrl, headers);
+    if (!isSuccess(profileResponse)) {
+        server.sendResponse("Could not retrieve the provider profile.", "text/plain", 502);
+        return;
+    }
+    var sessionId = server.oauthSessionCreate(server.getResponseBody(profileResponse));
+    if (sessionId == null) {
+        server.sendResponse("The profile was invalid or the session store is full.", "text/plain", 503);
+        return;
+    }
+    server.oauthSessionClear();
+    server.addHeader("Set-Cookie: bsl_session=" + sessionId +
+        "; Path=/; Max-Age=3600; HttpOnly; Secure; SameSite=Lax");
+    server.redirect("/");
+}
+
+function removePeer(clientId) {
+    if (participantSessions[clientId] != null) {
+        participantSessions[clientId] = null;
+        participantInfo[clientId] = null;
+        var departure = stringifyJSON({kind: "left", id: clientId});
+        for (var i = 0; i < maxParticipants; i = i + 1) {
+            if (participantSessions[i] != null) {
+                server.send(i, departure);
+            }
         }
     }
-    return 0;
-};
+}
 
-// ==============================
-// HTTP EVENT HANDLERS
-// ==============================
-server.get = function (path, data) {
-    print("get loc:" + path);
+function profileField(profile, key) {
+    // Missing object properties raise runtime errors in BSL.
+    if (regex("\"" + key + "\":", stringifyJSON(profile)) == "") {
+        return null;
+    }
+    try {
+        return profile[key];
+    } catch (error) {
+        return null;
+    }
+}
+
+server.get = function (path, request) {
+    server.addHeader("Cache-Control: no-store");
     if (path == "/") {
         server.sendFile("public/index.html");
     } else if (path == "/style.css") {
         server.sendFile("public/style.css");
-    } else if (path == "/config.js") {
-        // Google OAuth client ID and optional TURN servers
-        server.sendFile("public/config.js");
     } else if (path == "/jmeet-core.js") {
         server.sendFile("public/jmeet-core.js");
+    } else if (path == "/login/google") {
+        if (server.oauthStart("https://accounts.google.com/o/oauth2/v2/auth",
+            googleClientId, googleRedirectUri, "openid email profile") != 1) {
+            server.sendResponse("Could not start Google login.", "text/plain", 500);
+        }
+    } else if (path == "/login/github") {
+        if (server.oauthStart("https://github.com/login/oauth/authorize",
+            githubClientId, githubRedirectUri, "read:user") != 1) {
+            server.sendResponse("Could not start GitHub login.", "text/plain", 500);
+        }
+    } else if (path == "/google-callback") {
+        finishLogin("https://oauth2.googleapis.com/token", googleClientId,
+            googleClientSecret, googleRedirectUri, "https://openidconnect.googleapis.com/v1/userinfo");
+    } else if (path == "/github-callback") {
+        finishLogin("https://github.com/login/oauth/access_token", githubClientId,
+            githubClientSecret, githubRedirectUri, "https://api.github.com/user");
+    } else if (path == "/api/me") {
+        var profile = server.oauthSessionGet();
+        if (profile == null) {
+            server.sendResponse("Sign in required.", "text/plain", 401);
+        } else {
+            server.sendResponse(profile, "application/json", 200);
+        }
     } else {
         server.sendFile("public/404.html");
     }
+     gc();
 };
 
-// ==============================
-// WEBSOCKET (WS) EVENT HANDLERS
-// ==============================
+server.post = function (path, request) {
+    server.addHeader("Cache-Control: no-store");
+    if (path == "/logout") {
+        if (server.getHeader("Origin") != baseUrl) {
+            server.sendResponse("Invalid request origin.", "text/plain", 403);
+        } else {
+            var sessionId = server.getCookie("bsl_session");
+            if (sessionId != null) {
+                for (var i = 0; i < maxParticipants; i = i + 1) {
+                    if (participantSessions[i] == sessionId) {
+                        removePeer(i);
+                        server.close(i);
+                    }
+                }
+            }
+            server.oauthSessionClear();
+            server.addHeader("Set-Cookie: bsl_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax");
+            server.sendResponse("Signed out.", "text/plain", 200);
+        }
+    } else {
+        server.sendResponse("Not found.", "text/plain", 404);
+    }
 
-// Triggered when a client successfully connects
-server.onConnect = function (clientId) {
-    print("WebSocket connected! Client ID: " + clientId);
-    setRoom(clientId, "");
-    // Tell the connecting client its ID (used by the browser for signaling)
-    server.send(clientId, "__id__:" + clientId);
+     gc();
 };
 
-// Triggered when a client sends a message
+server.onConnect = function (clientId, path) {
+    var profileJson = server.oauthSessionGet();
+    if (path != "/signal" || server.getHeader("Origin") != baseUrl || profileJson == null) {
+        server.close(clientId);
+    } else {
+        var profile = parseJSON(profileJson);
+        var name = profileField(profile, "name");
+        if (name.type != "string" || name == "") {
+            name = profileField(profile, "login");
+        }
+        if (name.type != "string" || name == "") {
+            name = "Participant";
+        }
+        var picture = profileField(profile, "picture");
+        if (picture.type != "string") {
+            picture = profileField(profile, "avatar_url");
+        }
+        if (picture.type != "string") {
+            picture = "";
+        }
+        participantSessions[clientId] = server.getCookie("bsl_session");
+        participantInfo[clientId] = {name: name, picture: picture};
+        server.send(clientId, stringifyJSON({kind: "self", id: clientId, user: participantInfo[clientId]}));
+        for (var i = 0; i < maxParticipants; i = i + 1) {
+            if (i != clientId && participantSessions[i] != null) {
+                server.send(clientId, stringifyJSON({kind: "existing", id: i, user: participantInfo[i]}));
+                server.send(i, stringifyJSON({kind: "joined", id: clientId, user: participantInfo[clientId]}));
+            }
+        }
+    }
+     gc();
+};
+
 server.onData = function (message, clientId) {
-    // Heartbeat: keeps idle connections open through proxies like Cloudflare,
-    // which close a WebSocket after about 100 s without traffic.
-    if (message == "__ping__") {
-        server.send(clientId, "__pong__");
-        return 0;
+    if (participantSessions[clientId] != null) {
+        var incoming = parseJSON(message);
+        if (incoming.type != "object") {
+            return;
+        }
+        var kind = profileField(incoming, "kind");
+        if (kind == "signal") {
+            var target = profileField(incoming, "target");
+            var data = profileField(incoming, "data");
+            if (target.type == "number" && target >= 0 && target < maxParticipants &&
+                int(target) == target && target != clientId && participantSessions[target] != null &&
+                data.type == "object") {
+                server.send(target, stringifyJSON({kind: "signal", from: clientId, data: data}));
+            }
+        } else if (kind == "chat") {
+            var text = profileField(incoming, "text");
+            if (text.type == "string" && text.size > 0 && text.size <= 1000) {
+                var outgoing = stringifyJSON({kind: "chat", from: clientId, text: text});
+                for (var i = 0; i < maxParticipants; i = i + 1) {
+                    if (participantSessions[i] != null) {
+                        server.send(i, outgoing);
+                    }
+                }
+            }
+        } else if (kind == "media") {
+            // Mic/camera state (1 on, 0 off) so other tiles can show a muted badge
+            var audio = profileField(incoming, "audio");
+            var video = profileField(incoming, "video");
+            if (audio.type == "number" && video.type == "number" && (audio == 0 || audio == 1) && (video == 0 || video == 1)) {
+                var update = stringifyJSON({kind: "media", from: clientId, audio: audio, video: video});
+                for (var i = 0; i < maxParticipants; i = i + 1) {
+                    if (i != clientId && participantSessions[i] != null) {
+                        server.send(i, update);
+                    }
+                }
+            }
+        }
     }
-
-    if (substr(message, 0, 9) == ROOM_PREFIX) {
-        var room = substr(message, 9, ROOM_CODE_LENGTH);
-        print("Client " + clientId + " entered room " + room);
-        setRoom(clientId, room);
-        return 0;
-    }
-
-    print("Received from Client " + clientId + ": " + message);
-    if (clientId <= maxId) {
-        // Chat and WebRTC signaling only reach the sender's room
-        sendToRoom(rooms[clientId], message);
-    }
-    return 0;
+     gc();
 };
 
-// Triggered when a client disconnects
 server.onDisconnect = function (clientId) {
-    print("WebSocket disconnected! Client ID: " + clientId);
-    if (clientId <= maxId) {
-        var room = rooms[clientId];
-        rooms[clientId] = "";
-        // Let the rest of the room remove this participant's video tile
-        sendToRoom(room, "__left__:" + clientId);
-    }
+    removePeer(clientId);
+    gc();
 };
 
-// Start the server instance
-server.run();
+if (server.enableTLS(certificatePath, privateKeyPath) == -1) {
+    print("TLS setup failed; the video call server was not started.");
+} else {
+    print("Open " + baseUrl);
+    server.run();
+}
