@@ -8,7 +8,8 @@
 | `include("config.bzg")` fails | Copy `config.example.bzg` to `config.bzg` |
 | `enableTLS` is unknown | `lib/` is from an old `http` package. Delete `lib/` and run `bzg install` |
 | Port 443 already in use | Find it with `Get-NetTCPConnection -LocalPort 443` and stop that process (IIS, Skype or another `bzg run`) |
-| Port 8001 already in use | Find it with `Get-NetTCPConnection -LocalPort 8001` and stop that process, or change `tunnelPort` and the cloudflared `--url` together |
+| Port 8001 or 8002 already in use | Find it with `Get-NetTCPConnection -LocalPort 8001` (or 8002) and stop that process, often a leftover `node` or `bonezegei` |
+| Online, the page and sign-in work but Join call says "Disconnected" | The tunnel proxy isn't running, so the WebSocket upgrade is dropped. Use `npm run online`, or start `node scripts/tunnel-proxy.js` by hand |
 | Tunnel address shows an empty 404 page | cloudflared read `%USERPROFILE%\.cloudflared\config.yml`. Start it with `--config NUL` |
 | Tunnel address shows a Cloudflare 502 or 1033 error | `bzg run` isn't running, or it's on a different port than `--url` |
 | `npm run online` says "No tunnel address after 30 seconds" | Cloudflare didn't answer. Check the connection and run it again. cloudflared's log is in `%TEMP%\jmeet-cloudflared.log` |

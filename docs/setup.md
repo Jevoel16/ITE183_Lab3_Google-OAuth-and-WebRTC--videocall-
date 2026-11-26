@@ -25,7 +25,7 @@ cp config.example.bzg config.bzg
 | `googleClientId`, `googleClientSecret` | From the Google client below |
 | `githubClientId`, `githubClientSecret` | From the GitHub app below |
 | `useTunnel` | `1` for the Cloudflare tunnel (default), `0` for local HTTPS |
-| `tunnelPort` | `8001`, the local port cloudflared forwards to |
+| `tunnelPort` | `8002`, where `app.bzg` listens behind the tunnel proxy (which listens on 8001) |
 | `baseUrl` | The `https://<random>.trycloudflare.com` address, or `https://localhost` with `useTunnel = 0` |
 | `googleRedirectUri`, `githubRedirectUri` | `<baseUrl>/google-callback`, `<baseUrl>/github-callback` |
 | `certificatePath`, `privateKeyPath` | `cert/cert.pem`, `cert/key.pem` (only read with `useTunnel = 0`) |
@@ -54,16 +54,22 @@ npm run online
 
 It starts cloudflared, writes the new address into `useTunnel`, `tunnelPort`, `baseUrl` and both redirect URIs in `config.bzg` (no other lines are touched), copies the address, prints the two callbacks to register, then starts the app. Ctrl+C stops both. Add the printed callbacks to Google and GitHub (step 2 below) before signing in.
 
+It also starts `scripts/tunnel-proxy.js` on port 8001, between cloudflared and the app on 8002. cloudflared spells the WebSocket header `Sec-Websocket-Key` and Bonezegei only accepts `Sec-WebSocket-Key`, so without the proxy the page loads but calls never connect. The proxy is the only thing Node runs while the app is up.
+
 `npm run local` does the same for the fallback: it switches those lines to `https://localhost` and starts the app with `cert/`.
 
 Both are PowerShell scripts in `scripts/`. They don't run when started by `bzg run`, which starts every `package.json` script at once, so `bzg run` still just starts the app with whatever `config.bzg` says.
 
 ### By hand
 
-Two terminals:
+Three terminals, with `useTunnel = 1` and `tunnelPort = 8002` in `config.bzg`:
 
 ```bash
 bzg run
+```
+
+```bash
+node scripts/tunnel-proxy.js
 ```
 
 ```bash
@@ -76,7 +82,7 @@ cloudflared prints an address like `https://<random>.trycloudflare.com`. Then:
 
 1. Put it in `baseUrl`, `googleRedirectUri` and `githubRedirectUri` in `config.bzg`.
 2. Add `<address>/google-callback` to the Google client's redirect URIs and set the GitHub app's callback to `<address>/github-callback`.
-3. Stop `bzg run` (Ctrl+C) and start it again so it reads the new `config.bzg`. Leave cloudflared running, or the address changes.
+3. Stop `bzg run` (Ctrl+C) and start it again so it reads the new `config.bzg`. Leave cloudflared and the proxy running, or the address changes.
 4. Open the address and share it with the group. Everyone, the host included, uses that address.
 
 A quick tunnel gets a new address each time cloudflared starts, so steps 1 to 3 repeat every session. Google can take a minute to accept a new redirect URI.

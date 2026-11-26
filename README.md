@@ -25,7 +25,7 @@ Group video calls with chat in Meet-style rooms (up to 8 people), signed in with
 
 ITE183 Laboratory 3. Jmeet starts from the class starter repo [msuiit-ph/BSL_OAuth_and_WebRTC](https://github.com/msuiit-ph/BSL_OAuth_and_WebRTC): `app.bzg` signs people in with Google or GitHub (OAuth 2.0 authorization code flow), keeps the session in an `HttpOnly` cookie, serves the page and relays WebRTC signaling and chat over `/signal`. Audio and video go straight between browsers.
 
-By default the app runs behind a Cloudflare quick tunnel: `app.bzg` listens on plain HTTP at `localhost:8001` and Cloudflare gives everyone an HTTPS `trycloudflare.com` address, so teammates can join from anywhere and both Google and GitHub sign-in work. Local HTTPS on port 443 with a self-signed certificate is still there as a fallback (`useTunnel = 0`).
+By default the app runs behind a Cloudflare quick tunnel: `app.bzg` listens on plain HTTP at `localhost:8002` behind a small proxy on 8001 (`scripts/tunnel-proxy.js`), and Cloudflare gives everyone an HTTPS `trycloudflare.com` address, so teammates can join from anywhere and both Google and GitHub sign-in work. Local HTTPS on port 443 with a self-signed certificate is still there as a fallback (`useTunnel = 0`).
 
 On top of the starter we redesigned the whole client in the Jmeet look (Google Meet's palette, inverted for the Light theme), added an active-speaker ring, muted badges, screen sharing, a chat drawer, Meet-style rooms with invite links, and a heartbeat with automatic reconnect.
 
@@ -146,7 +146,7 @@ Reading dependencies from package.json...
  Installed  'http' for arch=x86
 
 > bzg run
-Listening on http://localhost:8001 for cloudflared
+Listening on http://localhost:8002 behind tunnel-proxy on 8001
 Open https://<random>.trycloudflare.com
 ```
 
@@ -168,7 +168,8 @@ Open https://<random>.trycloudflare.com
 flowchart LR
   A[Browser A] -->|HTTPS page, /api/me, wss /signal| CF[Cloudflare quick tunnel]
   B[Browser B] -->|HTTPS page, /api/me, wss /signal| CF
-  CF -->|cloudflared, plain HTTP| APP[app.bzg :8001]
+  CF -->|cloudflared, plain HTTP| PX[tunnel-proxy :8001]
+  PX -->|Sec-WebSocket-Key fixed| APP[app.bzg :8002]
   APP -->|code exchange, profile| G[Google OAuth]
   APP -->|code exchange, profile| GH[GitHub OAuth]
   A <-->|WebRTC audio and video| B

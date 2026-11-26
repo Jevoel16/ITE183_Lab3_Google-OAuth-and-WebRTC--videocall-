@@ -1,6 +1,6 @@
 # Architecture
 
-One process: `app.bzg` on Bonezegei, an HTTP and WebSocket server built from the class starter. By default it listens on plain HTTP at `localhost:8001` and a Cloudflare quick tunnel (`cloudflared`) gives browsers an HTTPS `trycloudflare.com` address; with `useTunnel = 0` it serves HTTPS on port 443 itself using `cert/`. Browsers send audio and video to each other directly over WebRTC; the server only signs people in and relays signaling and chat.
+One process: `app.bzg` on Bonezegei, an HTTP and WebSocket server built from the class starter. By default it listens on plain HTTP at `localhost:8002` and a Cloudflare quick tunnel (`cloudflared`) gives browsers an HTTPS `trycloudflare.com` address. cloudflared connects to `scripts/tunnel-proxy.js` on 8001, not to the app directly: cloudflared spells the WebSocket header `Sec-Websocket-Key`, Bonezegei's `http.dll` only accepts `Sec-WebSocket-Key`, and the proxy fixes the casing before the upgrade, then passes the bytes through untouched. Without it, pages and sign-in load but calls never connect; with `useTunnel = 0` it serves HTTPS on port 443 itself using `cert/`. Browsers send audio and video to each other directly over WebRTC; the server only signs people in and relays signaling and chat.
 
 ## Sign-in
 
