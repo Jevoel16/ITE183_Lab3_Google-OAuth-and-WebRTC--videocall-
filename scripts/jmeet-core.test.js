@@ -15,6 +15,11 @@ test("sign-in machine allows every listed transition", () => {
     assert.deepEqual(authTransition(signedIn, { type: "unauthorized" }), { status: "signedOut" });
     assert.deepEqual(authTransition(signedIn, { type: "logout" }), { status: "signedOut" });
     assert.deepEqual(authTransition({ status: "failed" }, { type: "retry" }), { status: "checking" });
+    const expired = { status: "expired", user: ana };
+    assert.deepEqual(authTransition(signedIn, { type: "expired" }), expired);
+    assert.deepEqual(authTransition(expired, { type: "ok", user: ana }), signedIn);
+    assert.deepEqual(authTransition(expired, { type: "unauthorized" }), { status: "signedOut" });
+    assert.deepEqual(authTransition(expired, { type: "logout" }), { status: "signedOut" });
 });
 
 test("sign-in machine rejects invalid transitions and empty profiles", () => {
@@ -22,6 +27,8 @@ test("sign-in machine rejects invalid transitions and empty profiles", () => {
     assert.throws(() => core.authTransition({ status: "signedOut" }, { type: "logout" }));
     assert.throws(() => core.authTransition({ status: "signedIn", user: ana }, { type: "error" }));
     assert.throws(() => core.authTransition({ status: "checking" }, { type: "retry" }));
+    assert.throws(() => core.authTransition({ status: "checking" }, { type: "expired" }));
+    assert.throws(() => core.authTransition({ status: "expired", user: ana }, { type: "expired" }));
     assert.throws(() => core.authTransition({ status: "checking" }, { type: "ok", user: { name: "" } }));
 });
 

@@ -8,23 +8,26 @@
         CHECKING: "checking",
         SIGNED_IN: "signedIn",
         SIGNED_OUT: "signedOut",
-        FAILED: "failed"
+        FAILED: "failed",
+        EXPIRED: "expired"
     });
 
-    // state: { status: "checking" | "signedOut" | "failed" } | { status: "signedIn", user }
-    // event: { type: "ok", user } | { type: "unauthorized" | "error" | "logout" | "retry" }
+    // state: { status: "checking" | "signedOut" | "failed" } | { status: "signedIn" | "expired", user }
+    // event: { type: "ok", user } | { type: "unauthorized" | "expired" | "error" | "logout" | "retry" }
     function authTransition(state, event) {
         const from = state.status;
         const type = event.type;
-        if (type === "ok" && (from === AUTH.CHECKING || from === AUTH.SIGNED_IN)) {
+        if (type === "ok" && (from === AUTH.CHECKING || from === AUTH.SIGNED_IN || from === AUTH.EXPIRED)) {
             if (!event.user || !event.user.name) throw new Error("Invalid user profile");
             return { status: AUTH.SIGNED_IN, user: event.user };
         }
-        if (type === "unauthorized" && (from === AUTH.CHECKING || from === AUTH.SIGNED_IN)) {
+        // The session ran out mid-call: keep the user (and the call) until the call ends
+        if (type === "expired" && from === AUTH.SIGNED_IN) return { status: AUTH.EXPIRED, user: state.user };
+        if (type === "unauthorized" && (from === AUTH.CHECKING || from === AUTH.SIGNED_IN || from === AUTH.EXPIRED)) {
             return { status: AUTH.SIGNED_OUT };
         }
         if (type === "error" && from === AUTH.CHECKING) return { status: AUTH.FAILED };
-        if (type === "logout" && from === AUTH.SIGNED_IN) return { status: AUTH.SIGNED_OUT };
+        if (type === "logout" && (from === AUTH.SIGNED_IN || from === AUTH.EXPIRED)) return { status: AUTH.SIGNED_OUT };
         if (type === "retry" && from === AUTH.FAILED) return { status: AUTH.CHECKING };
         throw new Error(`Invalid sign-in transition: ${from} + ${type}`);
     }

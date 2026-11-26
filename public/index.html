@@ -569,7 +569,11 @@
             const data = message.data.type === "chunk"
                 ? Core.collectChunk(chunks, message.from, message.data)
                 : message.data;
-            if (data) await handleSignal(participant, data, myGeneration);
+            // A bad offer or a late candidate only affects that one peer, so don't end the call
+            if (data) {
+                try { await handleSignal(participant, data, myGeneration); }
+                catch (error) { console.error(`Signal from ${participant.user.name} failed:`, error); }
+            }
         }
 
         // ==============================
@@ -603,6 +607,7 @@
             else renderControls();
             setStatus(message);
             document.title = "Jmeet";
+            if (auth.status === Core.AUTH.EXPIRED) setAuth({ type: "unauthorized" });
         }
 
         function stopSocket() {
@@ -822,8 +827,9 @@
         function renderAuth() {
             sessionStatus.hidden = auth.status !== Core.AUTH.CHECKING;
             login.hidden = auth.status !== Core.AUTH.SIGNED_OUT;
-            app.hidden = auth.status !== Core.AUTH.SIGNED_IN;
-            document.body.classList.toggle("in-app", auth.status === Core.AUTH.SIGNED_IN);
+            const signedIn = auth.status === Core.AUTH.SIGNED_IN || auth.status === Core.AUTH.EXPIRED;
+            app.hidden = !signedIn;
+            document.body.classList.toggle("in-app", signedIn);
             switch (auth.status) {
                 case Core.AUTH.CHECKING:
                     break;
@@ -837,6 +843,9 @@
                     setLocalTile(auth.user);
                     break;
                 }
+                case Core.AUTH.EXPIRED:
+                    showError("Your sign-in expired. You can stay in this call; sign in again after you leave.");
+                    break;
                 case Core.AUTH.SIGNED_OUT:
                     document.title = "Sign in | Jmeet";
                     chatLog.replaceChildren();
@@ -858,11 +867,16 @@
             try {
                 const response = await fetch("/api/me", { cache: "no-store" });
                 if (response.status === 401) {
-                    if (call !== Core.CALL.IDLE) cleanup("Your session expired. Sign in again.");
-                    setAuth({ type: "unauthorized" });
+                    // The call's socket was signed in when it opened and keeps working
+                    if (call !== Core.CALL.IDLE) {
+                        if (auth.status === Core.AUTH.SIGNED_IN) setAuth({ type: "expired" });
+                    } else {
+                        setAuth({ type: "unauthorized" });
+                    }
                     return;
                 }
                 if (!response.ok) throw new Error("Session request failed");
+                if (auth.status === Core.AUTH.EXPIRED) errorBox.hidden = true;
                 setAuth({ type: "ok", user: Core.profileToUser(await response.json()) });
             } catch (error) {
                 console.error("Session check failed:", error);
@@ -875,9 +889,9 @@
             try {
                 const response = await fetch("/logout", { method: "POST" });
                 if (!response.ok) throw new Error("Logout failed");
-                cleanup("Not in the call");
                 errorBox.hidden = true;
                 setAuth({ type: "logout" });
+                cleanup("Not in the call");
             } catch (error) {
                 console.error("Logout failed:", error);
                 showError("Couldn't log out. Try again.");
@@ -977,7 +991,7 @@
         renderControls();
         renderAuth();
         checkSession();
-        setInterval(() => { if (auth.status === Core.AUTH.SIGNED_IN) checkSession(); }, 60000);
+        setInterval(() => { if (auth.status === Core.AUTH.SIGNED_IN || auth.status === Core.AUTH.EXPIRED) checkSession(); }, 60000);
     </script>
 </body>
 </html>
