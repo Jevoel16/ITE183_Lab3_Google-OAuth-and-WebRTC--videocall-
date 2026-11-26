@@ -1,6 +1,6 @@
 # Architecture
 
-One process: `app.bzg` on Bonezegei, an HTTPS and WebSocket server on port 443 built from the class starter. Browsers send audio and video to each other directly over WebRTC; the server only signs people in and relays signaling and chat.
+One process: `app.bzg` on Bonezegei, an HTTP and WebSocket server built from the class starter. By default it listens on plain HTTP at `localhost:8001` and a Cloudflare quick tunnel (`cloudflared`) gives browsers an HTTPS `trycloudflare.com` address; with `useTunnel = 0` it serves HTTPS on port 443 itself using `cert/`. Browsers send audio and video to each other directly over WebRTC; the server only signs people in and relays signaling and chat.
 
 ## Sign-in
 
@@ -49,6 +49,6 @@ app.bzg              Server (starter + static files + media relay)
 config.example.bzg   Key template; the real config.bzg is gitignored
 public/              index.html, style.css, jmeet-core.js (tested logic), 404.html
 scripts/             Syntax check and node:test tests (CI only)
-cert/                Your certificate and key (gitignored)
+cert/                Your certificate and key for local HTTPS (gitignored)
 lib/                 http package from bzg install (gitignored)
 ```

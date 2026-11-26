@@ -8,7 +8,9 @@ Uninstall any older Bonezegei, then install Bonezegei Scripting Language from th
 bonezegei --version
 ```
 
-Then, in the project folder, `bzg install` downloads the `http` package into `lib/` (gitignored). Its `http.dll` has `enableTLS`, which the HTTPS server needs.
+Then, in the project folder, `bzg install` downloads the `http` package into `lib/` (gitignored). Its `http.dll` has `enableTLS`, which the local HTTPS fallback needs.
+
+Also install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) (`winget install Cloudflare.cloudflared`). Quick tunnels need no Cloudflare account.
 
 ## 2. Keys in config.bzg
 
@@ -22,9 +24,11 @@ cp config.example.bzg config.bzg
 |---|---|
 | `googleClientId`, `googleClientSecret` | From the Google client below |
 | `githubClientId`, `githubClientSecret` | From the GitHub app below |
-| `baseUrl` | `https://localhost`, or the address teammates open |
+| `useTunnel` | `1` for the Cloudflare tunnel (default), `0` for local HTTPS |
+| `tunnelPort` | `8001`, the local port cloudflared forwards to |
+| `baseUrl` | The `https://<random>.trycloudflare.com` address, or `https://localhost` with `useTunnel = 0` |
 | `googleRedirectUri`, `githubRedirectUri` | `<baseUrl>/google-callback`, `<baseUrl>/github-callback` |
-| `certificatePath`, `privateKeyPath` | `cert/cert.pem`, `cert/key.pem` |
+| `certificatePath`, `privateKeyPath` | `cert/cert.pem`, `cert/key.pem` (only read with `useTunnel = 0`) |
 
 `baseUrl` must match the address in the browser exactly: `/logout` and `/signal` reject any other `Origin`.
 
@@ -33,16 +37,45 @@ cp config.example.bzg config.bzg
 1. [Google Cloud Console](https://console.cloud.google.com/) > create or pick a project.
 2. APIs & Services > OAuth consent screen: External, and add every group member under Test users.
 3. Credentials > Create credentials > OAuth client ID > Web application.
-4. Authorized redirect URI: `https://localhost/google-callback`.
+4. Authorized redirect URI: `https://<tunnel>.trycloudflare.com/google-callback` (and `https://localhost/google-callback` for the fallback). Google accepts `trycloudflare.com` addresses because they're real HTTPS domains.
 5. Copy the client ID and secret into `config.bzg`.
 
 ### GitHub OAuth app
 
 1. GitHub > Settings > Developer settings > OAuth Apps > New OAuth App.
-2. Homepage URL `https://localhost`, Authorization callback URL `https://localhost/github-callback`.
+2. Homepage URL `https://<tunnel>.trycloudflare.com`, Authorization callback URL `https://<tunnel>.trycloudflare.com/github-callback`. A GitHub OAuth app holds one callback URL, so switch it back to `https://localhost/github-callback` for the fallback.
 3. Register, copy the client ID, then Generate a new client secret.
 
-## 3. Certificate
+## 3. Run behind a Cloudflare quick tunnel
+
+Two terminals:
+
+```bash
+bzg run
+```
+
+```bash
+cloudflared tunnel --config NUL --url http://localhost:8001
+```
+
+`--config NUL` makes cloudflared skip `%USERPROFILE%\.cloudflared\config.yml`; a catch-all rule in that file answers every quick-tunnel address with an empty 404.
+
+cloudflared prints an address like `https://<random>.trycloudflare.com`. Then:
+
+1. Put it in `baseUrl`, `googleRedirectUri` and `githubRedirectUri` in `config.bzg`.
+2. Add `<address>/google-callback` to the Google client's redirect URIs and set the GitHub app's callback to `<address>/github-callback`.
+3. Stop `bzg run` (Ctrl+C) and start it again so it reads the new `config.bzg`. Leave cloudflared running, or the address changes.
+4. Open the address and share it with the group. Everyone, the host included, uses that address.
+
+A quick tunnel gets a new address each time cloudflared starts, so steps 1 to 3 repeat every session. Google can take a minute to accept a new redirect URI.
+
+Cloudflare terminates HTTPS, so the browser still gets a secure page (camera, microphone and `Secure` cookies work) while `app.bzg` serves plain HTTP. Anyone with the address can reach the sign-in page while the tunnel runs; stop cloudflared when the call is over.
+
+## Local HTTPS fallback
+
+Without a tunnel, set `useTunnel = 0`, set `baseUrl` to `https://localhost` and the redirect URIs to match. The browser needs HTTPS for the camera on any address other than localhost, so this mode serves HTTPS itself with a self-signed certificate.
+
+### Certificate
 
 `cert/` is gitignored. Make a self-signed certificate:
 
@@ -55,15 +88,15 @@ On Windows, Git for Windows ships `openssl`. In Git Bash, put `MSYS_NO_PATHCONV=
 
 The browser warns because nobody vouches for this certificate. Click Advanced > Proceed to localhost.
 
-## 4. Run
+### Run
 
 ```bash
 bzg run
 ```
 
-It prints `Open https://localhost`. Port 443 must be free (see [troubleshooting.md](troubleshooting.md)).
+With `useTunnel = 0` it prints `Open https://localhost`. Port 443 must be free (see [troubleshooting.md](troubleshooting.md)).
 
-## Teammates on the same network
+### Teammates on the same network
 
 The host PC runs the server and teammates open its LAN address, for example `https://192.168.254.103`.
 

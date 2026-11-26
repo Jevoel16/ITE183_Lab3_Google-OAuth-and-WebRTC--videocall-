@@ -23,7 +23,9 @@ Group video calls with chat for up to 8 people, signed in with Google or GitHub,
 
 ## About
 
-ITE183 Laboratory 3. Jmeet starts from the class starter repo [msuiit-ph/BSL_OAuth_and_WebRTC](https://github.com/msuiit-ph/BSL_OAuth_and_WebRTC): `app.bzg` signs people in with Google or GitHub (OAuth 2.0 authorization code flow), keeps the session in an `HttpOnly` cookie, serves the page over HTTPS on port 443 and relays WebRTC signaling and chat over `/signal`. Audio and video go straight between browsers.
+ITE183 Laboratory 3. Jmeet starts from the class starter repo [msuiit-ph/BSL_OAuth_and_WebRTC](https://github.com/msuiit-ph/BSL_OAuth_and_WebRTC): `app.bzg` signs people in with Google or GitHub (OAuth 2.0 authorization code flow), keeps the session in an `HttpOnly` cookie, serves the page and relays WebRTC signaling and chat over `/signal`. Audio and video go straight between browsers.
+
+By default the app runs behind a Cloudflare quick tunnel: `app.bzg` listens on plain HTTP at `localhost:8001` and Cloudflare gives everyone an HTTPS `trycloudflare.com` address, so teammates can join from anywhere and both Google and GitHub sign-in work. Local HTTPS on port 443 with a self-signed certificate is still there as a fallback (`useTunnel = 0`).
 
 On top of the starter we redesigned the whole client in the Jmeet look (Google Meet's palette, inverted for the Light theme), added an active-speaker ring, muted badges, screen sharing and a chat drawer.
 
@@ -37,7 +39,7 @@ On top of the starter we redesigned the whole client in the Jmeet look (Google M
 
 ## Setup
 
-You need Windows, Bonezegei Scripting Language **v1.3.4** (Microsoft Store), OpenSSL (comes with Git for Windows) and a Google and a GitHub OAuth app. Full steps, including the OAuth consoles, are in [docs/setup.md](docs/setup.md).
+You need Windows, Bonezegei Scripting Language **v1.3.4** (Microsoft Store), [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) and a Google and a GitHub OAuth app. OpenSSL (comes with Git for Windows) is only needed for the local HTTPS fallback. Full steps, including the OAuth consoles, are in [docs/setup.md](docs/setup.md).
 
 ```bash
 git clone https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-.git
@@ -47,14 +49,14 @@ bzg install
 # keys: copy the template, then fill in your own (config.bzg is gitignored)
 cp config.example.bzg config.bzg
 
-# self-signed certificate (cert/ is gitignored)
-mkdir -p cert
-openssl req -x509 -newkey rsa:4096 -keyout cert/key.pem -out cert/cert.pem -sha256 -days 365 -nodes -subj "/CN=localhost"
-
+# terminal 1: the app on http://localhost:8001
 bzg run
+
+# terminal 2: the tunnel, prints https://<random>.trycloudflare.com
+cloudflared tunnel --config NUL --url http://localhost:8001
 ```
 
-Open <https://localhost> and choose Advanced > Proceed to localhost, since the certificate is self-signed. Teammates on the same network use `https://<your LAN IP>` (see [docs/setup.md](docs/setup.md#teammates-on-the-same-network)).
+Put the printed address in `baseUrl` and both redirect URIs in `config.bzg`, add the two callbacks to the Google and GitHub apps, restart `bzg run`, and share the address. A quick tunnel gets a new address every time it starts, so repeat this each session (see [docs/setup.md](docs/setup.md#3-run-behind-a-cloudflare-quick-tunnel)). For local HTTPS without a tunnel, see [Local HTTPS fallback](docs/setup.md#local-https-fallback).
 
 `config.bzg`, `cert/`, `*.pem` and `*.key` are in [.gitignore](.gitignore), which was committed before any key or certificate existed, so none are in the history.
 
@@ -121,7 +123,8 @@ Reading dependencies from package.json...
  Installed  'http' for arch=x86
 
 > bzg run
-Open https://localhost
+Listening on http://localhost:8001 for cloudflared
+Open https://<random>.trycloudflare.com
 ```
 
 ## Screenshots
@@ -140,8 +143,9 @@ Open https://localhost
 
 ```mermaid
 flowchart LR
-  A[Browser A] -->|HTTPS page, /api/me, wss /signal| APP[app.bzg :443]
-  B[Browser B] -->|HTTPS page, /api/me, wss /signal| APP
+  A[Browser A] -->|HTTPS page, /api/me, wss /signal| CF[Cloudflare quick tunnel]
+  B[Browser B] -->|HTTPS page, /api/me, wss /signal| CF
+  CF -->|cloudflared, plain HTTP| APP[app.bzg :8001]
   APP -->|code exchange, profile| G[Google OAuth]
   APP -->|code exchange, profile| GH[GitHub OAuth]
   A <-->|WebRTC audio and video| B
