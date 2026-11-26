@@ -11,6 +11,8 @@
 | Port 8001 already in use | Find it with `Get-NetTCPConnection -LocalPort 8001` and stop that process, or change `tunnelPort` and the cloudflared `--url` together |
 | Tunnel address shows an empty 404 page | cloudflared read `%USERPROFILE%\.cloudflared\config.yml`. Start it with `--config NUL` |
 | Tunnel address shows a Cloudflare 502 or 1033 error | `bzg run` isn't running, or it's on a different port than `--url` |
+| `npm run online` says "No tunnel address after 30 seconds" | Cloudflare didn't answer. Check the connection and run it again. cloudflared's log is in `%TEMP%\jmeet-cloudflared.log` |
+| `Skipping: start this with npm run online.` | The script was started directly or by `bzg run`. Use `npm run online` or `npm run local` |
 | `cloudflared` is not recognized | Install it (`winget install Cloudflare.cloudflared`) and open a new terminal |
 | `openssl` fails with "subject name is expected to be in the format /type0=value0..." | Git Bash rewrote `/CN=localhost` as a path. Put `MSYS_NO_PATHCONV=1` in front of the command |
 

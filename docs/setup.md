@@ -48,6 +48,18 @@ cp config.example.bzg config.bzg
 
 ## 3. Run behind a Cloudflare quick tunnel
 
+```bash
+npm run online
+```
+
+It starts cloudflared, writes the new address into `useTunnel`, `tunnelPort`, `baseUrl` and both redirect URIs in `config.bzg` (no other lines are touched), copies the address, prints the two callbacks to register, then starts the app. Ctrl+C stops both. Add the printed callbacks to Google and GitHub (step 2 below) before signing in.
+
+`npm run local` does the same for the fallback: it switches those lines to `https://localhost` and starts the app with `cert/`.
+
+Both are PowerShell scripts in `scripts/`. They don't run when started by `bzg run`, which starts every `package.json` script at once, so `bzg run` still just starts the app with whatever `config.bzg` says.
+
+### By hand
+
 Two terminals:
 
 ```bash

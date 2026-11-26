@@ -49,14 +49,14 @@ bzg install
 # keys: copy the template, then fill in your own (config.bzg is gitignored)
 cp config.example.bzg config.bzg
 
-# terminal 1: the app on http://localhost:8001
-bzg run
+# online: Cloudflare quick tunnel, prints and copies https://<random>.trycloudflare.com
+npm run online
 
-# terminal 2: the tunnel, prints https://<random>.trycloudflare.com
-cloudflared tunnel --config NUL --url http://localhost:8001
+# or local: https://localhost with a self-signed certificate in cert/
+npm run local
 ```
 
-Put the printed address in `baseUrl` and both redirect URIs in `config.bzg`, add the two callbacks to the Google and GitHub apps, restart `bzg run`, and share the address. A quick tunnel gets a new address every time it starts, so repeat this each session (see [docs/setup.md](docs/setup.md#3-run-behind-a-cloudflare-quick-tunnel)). For local HTTPS without a tunnel, see [Local HTTPS fallback](docs/setup.md#local-https-fallback).
+`npm run online` writes the tunnel address into `config.bzg` and prints the two callbacks to add to the Google and GitHub apps. A quick tunnel gets a new address every time it starts, so add them each session. Ctrl+C stops the app and the tunnel together (see [docs/setup.md](docs/setup.md#3-run-behind-a-cloudflare-quick-tunnel)). For local HTTPS without a tunnel, see [Local HTTPS fallback](docs/setup.md#local-https-fallback).
 
 `config.bzg`, `cert/`, `*.pem` and `*.key` are in [.gitignore](.gitignore), which was committed before any key or certificate existed, so none are in the history.
 
