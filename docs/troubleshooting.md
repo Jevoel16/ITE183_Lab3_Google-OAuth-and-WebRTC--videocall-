@@ -34,7 +34,8 @@
 
 | Problem | Fix |
 |---|---|
-| "Couldn't use your camera or microphone" | Allow both in the browser's site settings, and close other apps using the camera |
+| "Camera and mic are blocked" under the preview | Allow both in the browser's site settings, then click a toggle to try again. You can also join without them |
+| "Joined without camera or mic" | Same: the browser blocked them or no device was found. Close other apps using the camera |
 | Teammates are in the call but can't see each other | They're in different rooms. Compare the code in the header, or share the link from the copy button |
 | "Reconnecting..." stays on screen | The server stopped or the network dropped. It retries for about 45 s, then shows "Lost the connection to the call server" |
 | "Disconnected. The call may be full or your session expired." | More than 8 people, or the one-hour session ended. Reload and sign in |

@@ -68,6 +68,8 @@ Everything is in [public/index.html](public/index.html), [public/style.css](publ
 
 **Home.** Signing in lands on a home screen, never straight in a call. New meeting makes a fresh room code and joins it; the field next to Join takes a code or a pasted invite link. An invite link (or the code you had before signing in) only fills the field, so joining is always your choice. Leaving a call, or a join that fails, comes back here with the reason. The top bar has your avatar and name, the theme picker and Log out.
 
+On the left, home shows your own tile before you join, with mic and camera toggles, so you can check how you look and join muted or with the camera off. Turning the camera off stops it (the light goes out). When you join, the call takes over that same stream. If the browser blocks the camera and mic, a note under the tile says so and Join still works without them.
+
 **Call view.** The header holds the logo, the room code (`abc-defg-hij`, also the URL hash) with a button that copies the invite link, the call status (`3 in the call`) and the theme picker. The grid sizes itself from the number of tiles:
 
 ```js

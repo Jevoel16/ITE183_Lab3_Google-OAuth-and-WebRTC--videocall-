@@ -33,3 +33,7 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 14 | Click System, Light and Dark | The page and the chat panel switch at once and the choice survives a reload |
 | 15 | Send 30 chat messages | The chat log scrolls; the page itself doesn't grow |
 | 16 | Open an invite link while signed out, then sign in | Home with the code filled in; Join takes you in |
+| 17 | Sign in with the camera allowed | Home shows your camera, mirrored, with your name |
+| 18 | Turn the camera off on home, then join | Camera light goes out; in the call your tile shows your photo or initial |
+| 19 | Turn the mic off on home, then join | The other window shows your mic-off badge |
+| 20 | Block the camera in the site settings and reload | A note under the tile; Join still gets you in without camera or mic |
