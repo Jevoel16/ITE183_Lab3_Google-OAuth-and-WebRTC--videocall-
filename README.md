@@ -66,9 +66,9 @@ Everything is in [public/index.html](public/index.html), [public/style.css](publ
 
 **Login view.** A split layout: the sign-in card on the left, and on the right a still of the call grid built from the same tile styles the call uses. While `/api/me` is pending, `#session-status` shows the logo and "Checking your session...". If the check fails, `#error` turns into a banner with a Try again button.
 
-**Rooms.** The header shows the room code (`abc-defg-hij`), which is also the URL hash, and a button that copies the invite link. Opening the site without a code makes a new room. Before joining you can type a code or paste a link; in the call the code is locked.
+**Home.** Signing in lands on a home screen, never straight in a call. New meeting makes a fresh room code and joins it; the field next to Join takes a code or a pasted invite link. An invite link (or the code you had before signing in) only fills the field, so joining is always your choice. Leaving a call, or a join that fails, comes back here with the reason. The top bar has your avatar and name, the theme picker and Log out.
 
-**Call view.** The header holds the logo, the room code, the call status (`3 in the call`), the signed-in user's avatar and name, the theme picker and Log out. The grid sizes itself from the number of tiles:
+**Call view.** The header holds the logo, the room code (`abc-defg-hij`, also the URL hash) with a button that copies the invite link, the call status (`3 in the call`) and the theme picker. The grid sizes itself from the number of tiles:
 
 ```js
 // 1 tile, 2x2 up to 4, then 3 wide (8 people = 3+3+2)
@@ -88,15 +88,15 @@ meters.forEach((m, tile) => {
 });
 ```
 
-**Control bar.** Round mic and camera buttons turn red when off, Present shares the screen in place of the camera, Join call becomes a red Leave button once in the call.
+**Control bar.** Round mic and camera buttons turn red when off, Present shares the screen in place of the camera, and the red Leave button goes back to home.
 
-**Chat.** A side panel on desktop and a full-screen drawer on phones. Your messages are accent bubbles on the right, others are grey bubbles on the left with their avatar. A dot on the chat button and a toast show new messages while the panel is closed.
+**Chat.** A side panel on desktop and a full-screen drawer on phones, in the same colors as the rest of the theme. The call fits the screen, so long chats scroll inside the panel. Your messages are accent bubbles on the right, others are grey bubbles on the left with their avatar. A dot on the chat button and a toast show new messages while the panel is closed.
 
 Sign-in and the call each run on one state machine in `jmeet-core.js`, listed in [docs/state-machines.md](docs/state-machines.md).
 
 ## Backend Changes
 
-`app.bzg` is the starter's file with four additions:
+`app.bzg` is the starter's file with five additions:
 
 1. It serves `/style.css`, `/jmeet-core.js`, and `public/404.html` for unknown paths.
 2. A `media` message relays mic and camera state to everyone else. BSL's `parseJSON` turns `true` into a number, so the state travels as `1` or `0`:
@@ -110,7 +110,7 @@ Sign-in and the call each run on one state machine in `jmeet-core.js`, listed in
         // sent to every other participant
 ```
 
-3. Rooms. A socket has to send `{kind: "join", room}` first, and every relay loop goes through `sendToRoom()`. BSL's `regex` has no character classes, so the code is checked by hand:
+3. Rooms. A socket has to send `{kind: "join", room, key}` first, and every relay loop goes through `sendToRoom()`. BSL's `regex` has no character classes, so the code is checked by hand:
 
 ```js
 function isRoomCode(room) {
@@ -131,7 +131,18 @@ function isRoomCode(room) {
 }
 ```
 
-4. None on the server for big offers: the browser splits any signal over 3000 characters into numbered `chunk` parts and joins them back, because the native `http.dll` has failed on large WebSocket frames before.
+4. One slot per browser tab. `key` is a random id the tab keeps in `sessionStorage`. Through the tunnel a dropped socket can stay half-open, so without this a user who reconnects shows up twice. The join drops any older slot with the same key:
+
+```js
+for (var k = 0; k < maxParticipants; k = k + 1) {
+    if (k != clientId && participantKeys[k] == key) {
+        removePeer(k);
+        server.close(k);
+    }
+}
+```
+
+5. None on the server for big offers: the browser splits any signal over 3000 characters into numbered `chunk` parts and joins them back, because the native `http.dll` has failed on large WebSocket frames before.
 
 ## Terminal Output
 

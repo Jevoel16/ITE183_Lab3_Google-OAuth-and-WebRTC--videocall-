@@ -43,9 +43,9 @@ Whether this tab is in the call. Owner: `callTransition(state, event)`, used by 
 | `reconnecting` | `connected` | `inCall` |
 | `reconnecting` | `end` | `idle` |
 
-- `join` fires on the Join call button, before the camera prompt.
+- `join` fires on New meeting or Join on the home screen, before the camera prompt.
 - `connected` fires when `app.bzg` answers our `join` with `{kind: "self"}` over `/signal`.
 - `lost` fires when the socket closes while `inCall` (`lostConnection()`). The camera stays on and the page retries with `reconnectDelay()`.
 - `end` fires on Leave call, Log out, a socket that closes while `joining`, a signaling error outside one peer's offer/answer, or the sixth failed reconnect (`cleanup()`). A bad signal from one peer is logged and the call goes on.
-- Chat input and the Present button only work in `inCall`. Join shows in `idle`, Leave in the other three. The room code can only be edited in `idle`.
+- Chat input and the Present button only work in `inCall`. Signed in, `idle` shows the home screen (`#home`, with New meeting, the room code and Join) and the other three show the call view (`#app`, with Leave). No separate view flag: `renderView()` reads both machines.
 - Any other pair throws, for example `idle` + `end`.

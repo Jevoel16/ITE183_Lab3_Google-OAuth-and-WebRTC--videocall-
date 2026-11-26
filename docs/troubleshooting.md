@@ -38,5 +38,7 @@
 | Teammates are in the call but can't see each other | They're in different rooms. Compare the code in the header, or share the link from the copy button |
 | "Reconnecting..." stays on screen | The server stopped or the network dropped. It retries for about 45 s, then shows "Lost the connection to the call server" |
 | "Disconnected. The call may be full or your session expired." | More than 8 people, or the one-hour session ended. Reload and sign in |
+| "Your sign-in expired. You can stay in this call…" | The one-hour session ended mid-call. The call keeps going; sign in again after you leave |
+| The same person shows up twice | Fixed: a rejoining tab now replaces its old slot. If it still happens, they're in two tabs; close one |
 | "Couldn't connect to …. A TURN server may be needed." | The two networks block direct connections. Try the same Wi-Fi |
 | "Tap to hear the call" button | The phone blocked audio until a tap. Tap it once |

@@ -32,7 +32,7 @@ Each call is a room with a Meet-style code (`abc-defg-hij`) kept in the URL hash
 
 | From | Message | Meaning |
 |---|---|---|
-| Client | `{kind: "join", room}` | First message on a new socket. `app.bzg` checks the code (`isRoomCode()`) and ignores a second join |
+| Client | `{kind: "join", room, key}` | First message on a new socket. `app.bzg` checks the code (`isRoomCode()`) and ignores a second join. `key` is the tab's random id; any older slot with the same key is dropped (and announced as `left`), so a half-open socket can't leave a second tile |
 | Client | `{kind: "ping"}` | Heartbeat every 25 s. The server ignores it; it only keeps Cloudflare from closing an idle socket (about 100 s) |
 | Server | `{kind: "self", id, room, user}` | Your participant id, room and profile |
 | Server | `{kind: "existing", id, user}` | Someone already in the room. The newcomer sends them an offer |
@@ -44,7 +44,9 @@ Each call is a room with a Meet-style code (`abc-defg-hij`) kept in the URL hash
 
 When the socket drops mid-call, the page keeps the camera and the chat, removes the peers, and opens a new socket after 1, 2, 4, 8, 15 and 15 s (`reconnectDelay()`). The new socket sends `join` for the same room and the others re-connect to it as a newcomer. After the sixth failed try it gives up and shows "Lost the connection to the call server".
 
-Signing in leaves the page, and the provider sends you back to `/` without the hash, so the room code is also kept in `sessionStorage` for that tab.
+Signing in leaves the page, and the provider sends you back to `/` without the hash, so the room code is also kept in `sessionStorage` for that tab. After sign-in the page shows the home screen with that code filled in; it never joins on its own.
+
+The session lasts an hour. The page checks it every 60 s; a 401 during a call only shows a banner (the call's socket was signed in when it opened), and the login page comes up once the call ends.
 
 A `signal` whose JSON is longer than 3000 characters is split into `{type: "chunk", cid, i, n, part}` pieces by `splitSignal()` and rebuilt by `collectChunk()`, both in `jmeet-core.js`.
 
