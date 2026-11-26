@@ -291,7 +291,21 @@ p { text-wrap: pretty; }
 .provider-btn svg { width: 20px; height: 20px; flex: none; }
 .provider-btn .gh-mark { fill: currentColor; }
 /* ---------- Home ---------- */
-.home-body { grid-template-columns: minmax(0, 420px); }
+.home-body { grid-template-columns: minmax(0, 640px) minmax(0, 420px); }
+/* Your own call tile, before joining */
+.preview { aspect-ratio: 16 / 9; }
+.tile.preview .label { top: 8px; bottom: auto; }
+/* Room for the toggles under the avatar */
+.tile.preview .avatar { padding-bottom: 56px; }
+.preview-note { min-height: 20px; margin: 12px 0 0; color: var(--muted); font-size: 14px; }
+.preview-controls {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+}
 .join-form { margin-top: 32px; }
 .join-form label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--muted); }
 .join-row { display: flex; gap: 8px; }

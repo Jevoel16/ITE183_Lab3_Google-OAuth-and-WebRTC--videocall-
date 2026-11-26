@@ -50,6 +50,24 @@
         return next;
     }
 
+    // ==============================
+    // CAMERA PREVIEW ON HOME (handOff: the call takes the stream without stopping it)
+    // ==============================
+    const PREVIEW = Object.freeze({ OFF: "off", STARTING: "starting", READY: "ready", BLOCKED: "blocked" });
+
+    const PREVIEW_TRANSITIONS = Object.freeze({
+        off: { start: PREVIEW.STARTING },
+        starting: { ready: PREVIEW.READY, blocked: PREVIEW.BLOCKED, stop: PREVIEW.OFF, handOff: PREVIEW.OFF },
+        ready: { stop: PREVIEW.OFF, handOff: PREVIEW.OFF },
+        blocked: { start: PREVIEW.STARTING, stop: PREVIEW.OFF, handOff: PREVIEW.OFF }
+    });
+
+    function previewTransition(state, event) {
+        const next = (PREVIEW_TRANSITIONS[state] || {})[event];
+        if (!next) throw new Error(`Invalid preview transition: ${state} + ${event}`);
+        return next;
+    }
+
     // 1 s, 2 s, 4 s, 8 s, 15 s, 15 s, then null: about 45 s before giving up
     function reconnectDelay(attempt) {
         return attempt < 6 ? Math.min(1000 * 2 ** attempt, 15000) : null;
@@ -158,6 +176,7 @@
     const api = {
         AUTH, authTransition,
         CALL, callTransition, reconnectDelay,
+        PREVIEW, previewTransition,
         isRoomCode, makeRoomCode, normalizeRoomInput,
         isAllowedPicture, profileToUser, initialOf,
         gridColumns,

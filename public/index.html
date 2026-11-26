@@ -62,6 +62,19 @@
                 </div>
             </div>
             <div class="login-body home-body">
+                <!-- Check your camera and mic before joining; the call takes over this stream -->
+                <div class="preview-col">
+                    <figure class="tile self preview video-off" id="preview-tile">
+                        <video id="preview" autoplay muted playsinline></video>
+                        <div class="avatar"><span></span><img alt="" referrerpolicy="no-referrer"></div>
+                        <figcaption class="label"><span class="mic-off" data-icon="micOffSmall"></span><span class="name"></span></figcaption>
+                        <div class="preview-controls">
+                            <button id="preview-audio" class="ctrl" type="button" aria-pressed="true" aria-label="Microphone"></button>
+                            <button id="preview-video" class="ctrl" type="button" aria-pressed="true" aria-label="Camera"></button>
+                        </div>
+                    </figure>
+                    <p id="preview-note" class="preview-note" role="status"></p>
+                </div>
                 <div class="login-card">
                     <h1 id="home-title">Start a call or join one</h1>
                     <p>A new meeting gets its own code. Send the invite link to up to 7 others.</p>
@@ -175,6 +188,10 @@
         const status = $("status");
         const localVideo = $("local");
         const localTile = $("local-tile");
+        const previewTile = $("preview-tile");
+        const previewVideo = $("preview");
+        const previewAudio = $("preview-audio");
+        const previewVideoToggle = $("preview-video");
         const videos = $("videos");
         const videoToggle = $("video-toggle");
         const audioToggle = $("audio-toggle");
@@ -205,6 +222,8 @@
 
         let auth = { status: Core.AUTH.CHECKING };   // see docs/state-machines.md
         let call = Core.CALL.IDLE;
+        let preview = Core.PREVIEW.OFF;
+        let previewGeneration = 0;
         const enabled = { video: true, audio: true };
         let stream = null;        // camera + mic
         let screenTrack = null;   // while presenting
@@ -300,6 +319,11 @@
             if (Core.isAllowedPicture(user.picture)) img.src = user.picture;
             else img.removeAttribute("src");
             localTile.querySelector(".name").textContent = user.name + " (You)";
+            previewTile.querySelector(".avatar span").textContent = Core.initialOf(user.name);
+            const previewImg = previewTile.querySelector(".avatar img");
+            if (Core.isAllowedPicture(user.picture)) previewImg.src = user.picture;
+            else previewImg.removeAttribute("src");
+            previewTile.querySelector(".name").textContent = user.name;
         }
 
         // ==============================
@@ -602,6 +626,97 @@
         }
 
         // ==============================
+        // CAMERA PREVIEW (home screen; see docs/state-machines.md)
+        // ==============================
+        function setPreview(event) {
+            preview = Core.previewTransition(preview, event);
+            renderPreview();
+        }
+
+        function renderPreview() {
+            const ready = preview === Core.PREVIEW.READY;
+            if (previewVideo.srcObject !== (ready ? stream : null)) previewVideo.srcObject = ready ? stream : null;
+            setTileMedia(previewTile, ready && enabled.audio && hasTrack("audio"), ready && enabled.video && hasTrack("video"));
+            renderToggle(previewAudio, enabled.audio, ICONS.micOn, ICONS.micOff, "microphone");
+            renderToggle(previewVideoToggle, enabled.video, ICONS.camOn, ICONS.camOff, "camera");
+            previewAudio.disabled = previewVideoToggle.disabled = preview === Core.PREVIEW.STARTING;
+            switch (preview) {
+                case Core.PREVIEW.STARTING:
+                    $("preview-note").textContent = "Starting camera...";
+                    break;
+                case Core.PREVIEW.BLOCKED:
+                    $("preview-note").textContent = "Camera and mic are blocked. Allow them in the browser's site settings, or join without them.";
+                    break;
+                case Core.PREVIEW.READY:
+                case Core.PREVIEW.OFF:
+                    $("preview-note").textContent = "";
+                    break;
+            }
+        }
+
+        async function startPreview() {
+            if (preview !== Core.PREVIEW.OFF || stream) return;
+            setPreview("start");
+            const myPreview = ++previewGeneration;
+            try {
+                const acquired = enabled.video || enabled.audio
+                    ? await navigator.mediaDevices.getUserMedia({ video: enabled.video, audio: enabled.audio })
+                    : new MediaStream();
+                // Left home (joined or signed out) while the browser was asking
+                if (myPreview !== previewGeneration) return acquired.getTracks().forEach(track => track.stop());
+                stream = acquired;
+                setPreview("ready");
+            } catch (error) {
+                if (myPreview !== previewGeneration) return;
+                console.error("Camera preview failed:", error);
+                enabled.video = enabled.audio = false;
+                setPreview("blocked");
+            }
+        }
+
+        function stopPreview() {
+            if (preview === Core.PREVIEW.OFF) return;
+            previewGeneration++;
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            stream = null;
+            setPreview("stop");
+        }
+
+        // Off stops the track so the camera light goes out; on asks for that device again
+        async function togglePreview(kind, button) {
+            if (preview === Core.PREVIEW.BLOCKED) {
+                stopPreview();
+                enabled[kind] = true;
+                return startPreview();
+            }
+            if (preview !== Core.PREVIEW.READY) return;
+            const myPreview = previewGeneration;
+            button.disabled = true;
+            try {
+                if (enabled[kind]) {
+                    for (const track of stream.getTracks().filter(item => item.kind === kind)) {
+                        track.stop();
+                        stream.removeTrack(track);
+                    }
+                    enabled[kind] = false;
+                } else {
+                    const acquired = await navigator.mediaDevices.getUserMedia({ [kind]: true });
+                    if (myPreview !== previewGeneration || !stream) return acquired.getTracks().forEach(track => track.stop());
+                    stream.addTrack(acquired.getTracks()[0]);
+                    enabled[kind] = true;
+                    // The video element doesn't always pick up a track added later
+                    previewVideo.srcObject = null;
+                }
+            } catch (error) {
+                console.error(`Could not turn on the ${kind}:`, error);
+                toast(`Couldn't turn on the ${kind === "video" ? "camera" : "microphone"}. Check the browser's permissions.`);
+            } finally {
+                button.disabled = false;
+                if (myPreview === previewGeneration) renderPreview();
+            }
+        }
+
+        // ==============================
         // JOIN / LEAVE
         // ==============================
         function cleanup(message) {
@@ -618,8 +733,10 @@
             selfId = null;
             if (screenTrack) screenTrack.stop();
             screenTrack = null;
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            stream = null;
+            if (stream && preview === Core.PREVIEW.OFF) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
             localVideo.srcObject = null;
             unmeter(localTile);
             clearInterval(speakerTimer);
@@ -735,6 +852,8 @@
         async function startCall() {
             $("home-status").textContent = "";
             chatLog.replaceChildren();
+            previewGeneration++;
+            if (preview !== Core.PREVIEW.OFF) setPreview("handOff");
             setCall("join");
             videoToggle.disabled = true;
             audioToggle.disabled = true;
@@ -742,9 +861,20 @@
             setStatus("Joining...");
             try {
                 audioContext = new AudioContext();
-                const acquired = enabled.video || enabled.audio
-                    ? await navigator.mediaDevices.getUserMedia({ video: enabled.video, audio: enabled.audio })
-                    : new MediaStream();
+                let acquired = stream; // from the preview, with the choices made there
+                if (!acquired) {
+                    try {
+                        acquired = enabled.video || enabled.audio
+                            ? await navigator.mediaDevices.getUserMedia({ video: enabled.video, audio: enabled.audio })
+                            : new MediaStream();
+                    } catch (error) {
+                        // No camera or mic still lets you listen and chat
+                        console.error("Joining without camera or mic:", error);
+                        enabled.video = enabled.audio = false;
+                        acquired = new MediaStream();
+                        toast("Joined without camera or mic. Allow them in the browser's site settings.");
+                    }
+                }
                 if (myGeneration !== generation) {
                     acquired.getTracks().forEach(track => track.stop());
                     return;
@@ -760,7 +890,7 @@
                 document.title = room + " | Jmeet";
             } catch (error) {
                 console.error("Could not start call:", error);
-                if (myGeneration === generation) cleanup("Couldn't use your camera or microphone. Check the browser's permissions.");
+                if (myGeneration === generation) cleanup("Couldn't start the call. Try again.");
             }
         }
 
@@ -871,6 +1001,8 @@
             home.hidden = !signedIn || call !== Core.CALL.IDLE;
             app.hidden = !signedIn || call === Core.CALL.IDLE;
             document.body.classList.toggle("in-app", !app.hidden);
+            if (!home.hidden) startPreview();
+            else if (call === Core.CALL.IDLE) stopPreview();
         }
 
         function renderAuth() {
@@ -993,6 +1125,8 @@
         chatToggle.innerHTML = ICONS.chat;
 
         videoToggle.addEventListener("click", () => toggleMedia("video", videoToggle));
+        previewVideoToggle.addEventListener("click", () => togglePreview("video", previewVideoToggle));
+        previewAudio.addEventListener("click", () => togglePreview("audio", previewAudio));
         audioToggle.addEventListener("click", () => toggleMedia("audio", audioToggle));
         shareToggle.addEventListener("click", toggleShare);
         chatToggle.addEventListener("click", () => setChatOpen(!chatOpen()));
@@ -1036,6 +1170,7 @@
         // The chat starts closed on phones, where it covers the call
         setChatOpen(!matchMedia("(max-width: 800px)").matches);
         initTheme();
+        renderPreview();
         initRoom();
         renderControls();
         renderAuth();

@@ -51,6 +51,28 @@ test("call machine rejects invalid transitions", () => {
     assert.throws(() => core.callTransition(core.CALL.RECONNECTING, "lost"));
 });
 
+test("preview machine allows every listed transition", () => {
+    const { PREVIEW, previewTransition } = core;
+    assert.equal(previewTransition(PREVIEW.OFF, "start"), PREVIEW.STARTING);
+    assert.equal(previewTransition(PREVIEW.STARTING, "ready"), PREVIEW.READY);
+    assert.equal(previewTransition(PREVIEW.STARTING, "blocked"), PREVIEW.BLOCKED);
+    assert.equal(previewTransition(PREVIEW.STARTING, "stop"), PREVIEW.OFF);
+    assert.equal(previewTransition(PREVIEW.STARTING, "handOff"), PREVIEW.OFF);
+    assert.equal(previewTransition(PREVIEW.READY, "stop"), PREVIEW.OFF);
+    assert.equal(previewTransition(PREVIEW.READY, "handOff"), PREVIEW.OFF);
+    assert.equal(previewTransition(PREVIEW.BLOCKED, "start"), PREVIEW.STARTING);
+    assert.equal(previewTransition(PREVIEW.BLOCKED, "stop"), PREVIEW.OFF);
+    assert.equal(previewTransition(PREVIEW.BLOCKED, "handOff"), PREVIEW.OFF);
+});
+
+test("preview machine rejects invalid transitions", () => {
+    const { PREVIEW, previewTransition } = core;
+    assert.throws(() => previewTransition(PREVIEW.OFF, "ready"));
+    assert.throws(() => previewTransition(PREVIEW.OFF, "stop"));
+    assert.throws(() => previewTransition(PREVIEW.READY, "start"));
+    assert.throws(() => previewTransition(PREVIEW.READY, "blocked"));
+});
+
 test("reconnectDelay backs off, then gives up", () => {
     assert.deepEqual([0, 1, 2, 3, 4, 5].map(core.reconnectDelay), [1000, 2000, 4000, 8000, 15000, 15000]);
     assert.equal(core.reconnectDelay(6), null);
