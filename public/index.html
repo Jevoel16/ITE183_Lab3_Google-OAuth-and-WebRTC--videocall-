@@ -51,20 +51,46 @@
             </div>
         </section>
 
+        <!-- ==================== HOME (signed in, not in a call) ==================== -->
+        <section id="home" class="login" hidden aria-labelledby="home-title">
+            <div class="top-bar">
+                <span class="brand" data-brand></span>
+                <div class="call-header-end">
+                    <div id="identity" class="identity"></div>
+                    <div class="theme-picker" role="group" aria-label="Theme" data-theme-picker></div>
+                    <button id="logout" class="text-btn" type="button">Log out</button>
+                </div>
+            </div>
+            <div class="login-body home-body">
+                <div class="login-card">
+                    <h1 id="home-title">Start a call or join one</h1>
+                    <p>A new meeting gets its own code. Send the invite link to up to 7 others.</p>
+                    <button id="new-room" class="pill-btn" type="button">New meeting</button>
+                    <form id="join-form" class="join-form" autocomplete="off" novalidate>
+                        <label for="room-code">Room code or invite link</label>
+                        <div class="join-row">
+                            <input id="room-code" name="room" spellcheck="false" autocorrect="off" autocapitalize="none"
+                                   enterkeyhint="go" maxlength="200" placeholder="abc-defg-hij" aria-describedby="room-error">
+                            <button id="join" class="text-btn" type="submit">Join</button>
+                        </div>
+                        <p id="room-error" class="field-error"></p>
+                    </form>
+                    <p id="home-status" class="home-status" role="status"></p>
+                </div>
+            </div>
+        </section>
+
         <!-- ==================== CALL ==================== -->
         <section id="app" class="call" hidden aria-label="Video call">
             <header class="call-header">
                 <span class="brand" data-brand></span>
                 <div class="room">
-                    <label for="room-code" class="visually-hidden">Room code</label>
-                    <input id="room-code" spellcheck="false" autocomplete="off" maxlength="200" placeholder="abc-defg-hij">
+                    <span id="room-name" class="room-name"></span>
                     <button id="room-copy" class="icon-btn" type="button" aria-label="Copy invite link" title="Copy invite link" data-icon="link"></button>
                 </div>
                 <p id="status" role="status">Not in the call</p>
                 <div class="call-header-end">
-                    <div id="identity" class="identity"></div>
                     <div class="theme-picker" role="group" aria-label="Theme" data-theme-picker></div>
-                    <button id="logout" class="text-btn" type="button">Log out</button>
                 </div>
             </header>
 
@@ -99,7 +125,6 @@
                     <button id="audio-toggle" class="ctrl" type="button" aria-pressed="true" aria-label="Microphone"></button>
                     <button id="video-toggle" class="ctrl" type="button" aria-pressed="true" aria-label="Camera"></button>
                     <button id="share-toggle" class="ctrl" type="button" aria-pressed="false" aria-label="Present screen" hidden></button>
-                    <button id="join" class="pill-btn" type="button">Join call</button>
                     <button id="leave" class="ctrl leave" type="button" aria-label="Leave call" title="Leave call" hidden></button>
                 </div>
                 <button id="chat-toggle" class="ctrl" type="button" aria-pressed="true" aria-label="Chat" title="Chat"></button>
@@ -146,7 +171,6 @@
         const app = $("app");
         const sessionStatus = $("session-status");
         const errorBox = $("error");
-        const join = $("join");
         const leave = $("leave");
         const status = $("status");
         const localVideo = $("local");
@@ -176,6 +200,8 @@
             } catch (e) { return crypto.randomUUID(); }
         })();
         const roomInput = $("room-code");
+        const roomError = $("room-error");
+        const home = $("home");
 
         let auth = { status: Core.AUTH.CHECKING };   // see docs/state-machines.md
         let call = Core.CALL.IDLE;
@@ -330,8 +356,6 @@
             shareToggle.setAttribute("aria-pressed", String(!!screenTrack));
             shareToggle.title = screenTrack ? "Stop presenting" : "Present screen";
             const inCall = call !== Core.CALL.IDLE;
-            roomInput.readOnly = inCall;
-            join.hidden = inCall;
             leave.hidden = !inCall;
             shareToggle.hidden = call !== Core.CALL.IN_CALL || !navigator.mediaDevices?.getDisplayMedia;
             setTileMedia(localTile, enabled.audio && hasTrack("audio"), !!screenTrack || (enabled.video && hasTrack("video")));
@@ -361,6 +385,7 @@
 
         function setCall(event) {
             call = Core.callTransition(call, event);
+            renderView();
             renderControls();
             const chatReady = call === Core.CALL.IN_CALL;
             chatInput.disabled = !chatReady;
@@ -606,6 +631,7 @@
             if (call !== Core.CALL.IDLE) setCall("end");
             else renderControls();
             setStatus(message);
+            $("home-status").textContent = message;
             document.title = "Jmeet";
             if (auth.status === Core.AUTH.EXPIRED) setAuth({ type: "unauthorized" });
         }
@@ -660,7 +686,9 @@
         function setRoom(code) {
             room = code;
             roomInput.value = code;
+            $("room-name").textContent = code;
             roomInput.removeAttribute("aria-invalid");
+            roomError.textContent = "";
             history.replaceState(null, "", location.pathname + "#" + code);
             try { sessionStorage.setItem(ROOM_KEY, code); } catch (e) { /* storage blocked: the hash still has it */ }
         }
@@ -668,16 +696,19 @@
         function readRoomInput() {
             const code = Core.normalizeRoomInput(roomInput.value);
             if (code) setRoom(code);
-            else roomInput.setAttribute("aria-invalid", "true");
+            else {
+                roomInput.setAttribute("aria-invalid", "true");
+                roomError.textContent = "Enter a code like abc-defg-hij, or paste an invite link.";
+            }
             return code;
         }
 
         function initRoom() {
             let saved = "";
             try { saved = sessionStorage.getItem(ROOM_KEY) || ""; } catch (e) {}
-            const code = Core.normalizeRoomInput(location.hash) || Core.normalizeRoomInput(saved)
-                || Core.makeRoomCode(n => crypto.getRandomValues(new Uint32Array(1))[0] % n);
-            setRoom(code);
+            // An invite link or the code from before sign-in only fills the field; joining is the user's call
+            const code = Core.normalizeRoomInput(location.hash) || Core.normalizeRoomInput(saved);
+            if (code) setRoom(code);
         }
 
         async function copyInvite() {
@@ -690,11 +721,20 @@
             }
         }
 
-        join.addEventListener("click", async () => {
-            if (!readRoomInput()) {
-                toast("Enter a room code like abc-defg-hij, or paste an invite link.");
-                return roomInput.focus();
-            }
+        $("join-form").addEventListener("submit", event => {
+            event.preventDefault();
+            if (!readRoomInput()) return roomInput.focus();
+            startCall();
+        });
+
+        $("new-room").addEventListener("click", () => {
+            setRoom(Core.makeRoomCode(n => crypto.getRandomValues(new Uint32Array(1))[0] % n));
+            startCall();
+        });
+
+        async function startCall() {
+            $("home-status").textContent = "";
+            chatLog.replaceChildren();
             setCall("join");
             videoToggle.disabled = true;
             audioToggle.disabled = true;
@@ -722,11 +762,10 @@
                 console.error("Could not start call:", error);
                 if (myGeneration === generation) cleanup("Couldn't use your camera or microphone. Check the browser's permissions.");
             }
-        });
+        }
 
         leave.addEventListener("click", () => {
             cleanup("You left the call");
-            addSystemMessage("You left the call");
         });
 
         async function toggleMedia(kind, button) {
@@ -824,16 +863,23 @@
             renderAuth();
         }
 
-        function renderAuth() {
+        // Signed in: home while idle, the call view otherwise, from the two machines' status
+        function renderView() {
+            const signedIn = auth.status === Core.AUTH.SIGNED_IN || auth.status === Core.AUTH.EXPIRED;
             sessionStatus.hidden = auth.status !== Core.AUTH.CHECKING;
             login.hidden = auth.status !== Core.AUTH.SIGNED_OUT;
-            const signedIn = auth.status === Core.AUTH.SIGNED_IN || auth.status === Core.AUTH.EXPIRED;
-            app.hidden = !signedIn;
-            document.body.classList.toggle("in-app", signedIn);
+            home.hidden = !signedIn || call !== Core.CALL.IDLE;
+            app.hidden = !signedIn || call === Core.CALL.IDLE;
+            document.body.classList.toggle("in-app", !app.hidden);
+        }
+
+        function renderAuth() {
+            renderView();
             switch (auth.status) {
                 case Core.AUTH.CHECKING:
                     break;
                 case Core.AUTH.SIGNED_IN: {
+                    if (call === Core.CALL.IDLE) document.title = "Jmeet";
                     const identity = $("identity");
                     const name = document.createElement("span");
                     name.className = "identity-name";
@@ -848,6 +894,7 @@
                     break;
                 case Core.AUTH.SIGNED_OUT:
                     document.title = "Sign in | Jmeet";
+                    errorBox.hidden = true;
                     chatLog.replaceChildren();
                     break;
                 case Core.AUTH.FAILED: {
@@ -955,8 +1002,10 @@
             participants.forEach(p => playRemote(p.video));
         });
         $("room-copy").addEventListener("click", copyInvite);
-        roomInput.addEventListener("change", () => { if (call === Core.CALL.IDLE) readRoomInput(); });
-        roomInput.addEventListener("keydown", event => { if (event.key === "Enter" && !join.hidden) join.click(); });
+        roomInput.addEventListener("input", () => {
+            roomInput.removeAttribute("aria-invalid");
+            roomError.textContent = "";
+        });
         window.addEventListener("hashchange", () => {
             const code = Core.normalizeRoomInput(location.hash);
             if (code && call === Core.CALL.IDLE) setRoom(code);

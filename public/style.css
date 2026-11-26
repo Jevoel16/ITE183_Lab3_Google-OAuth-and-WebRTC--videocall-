@@ -290,6 +290,30 @@ p { text-wrap: pretty; }
 .provider-btn:hover { background: var(--btn); }
 .provider-btn svg { width: 20px; height: 20px; flex: none; }
 .provider-btn .gh-mark { fill: currentColor; }
+/* ---------- Home ---------- */
+.home-body { grid-template-columns: minmax(0, 420px); }
+.join-form { margin-top: 32px; }
+.join-form label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--muted); }
+.join-row { display: flex; gap: 8px; }
+#room-code {
+    flex: 1;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+}
+#room-code:hover { background: var(--btn); }
+#room-code[aria-invalid="true"] { border-color: var(--error); }
+#room-code::placeholder { color: var(--muted); }
+.join-row .text-btn { min-height: 48px; }
+.login-card .field-error { min-height: 20px; margin: 8px 0 0; color: var(--error); font-size: 14px; }
+.login-card .home-status { margin: 16px 0 0; font-size: 14px; }
+
 /* Same tiles as the call, so the first screen shows the real product */
 .login-preview {
     display: grid;
@@ -319,21 +343,7 @@ body.in-app main { flex: 1 1 0; }
     white-space: nowrap;
 }
 .room { display: flex; align-items: center; gap: 2px; }
-#room-code {
-    width: 15ch;
-    min-height: 44px;
-    padding: 0 10px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: .02em;
-}
-#room-code:not([readonly]) { border-color: var(--border); }
-#room-code:not([readonly]):hover { background: var(--btn); }
-#room-code[aria-invalid="true"] { border-color: var(--error); }
-#room-code::placeholder { color: var(--muted); }
+.room-name { padding: 0 10px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .call-header-end { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .identity { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
 .identity-name { max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -637,10 +647,11 @@ body.in-app main { flex: 1 1 0; }
 @media (max-width: 800px) {
     .top-bar, .call-header { padding: 12px 16px; }
     .call-header { flex-wrap: wrap; row-gap: 4px; }
-    .call-header .brand b, .identity-name { display: none; }
+    .call-header .brand b, #home .brand b, .identity-name { display: none; }
+    .call-header-end { gap: 8px; }
     #status { order: 3; flex-basis: 100%; }
     .call-header { gap: 8px; }
-    #room-code { width: 13ch; padding: 0 6px; }
+    .room-name { padding: 0 6px; }
     .call-body { grid-template-columns: minmax(0, 1fr); padding: 0 12px; }
     /* Chat becomes a drawer over the call */
     .chat {
