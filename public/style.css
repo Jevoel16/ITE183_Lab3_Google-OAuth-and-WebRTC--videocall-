@@ -301,6 +301,8 @@ p { text-wrap: pretty; }
 /* ---------- Call layout ---------- */
 .call { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 body.in-app { height: 100dvh; }
+/* Fit the call to the screen so the chat log scrolls instead of the page growing */
+body.in-app main { flex: 1 1 0; }
 .call-header {
     display: flex;
     align-items: center;
