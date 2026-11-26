@@ -5,7 +5,9 @@
   "main": "app.bzg",
   "scripts": {
     "start": "bonezegei app.bzg",
-    "test": "node scripts/check-syntax.js && node --test \"scripts/*.test.js\""
+    "test": "node scripts/check-syntax.js && node --test \"scripts/*.test.js\"",
+    "online": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/online.ps1",
+    "local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1"
   },
   "dependencies": {
     "http": "^1.0.0"
