@@ -17,13 +17,13 @@
     --border: #a09c97;      /* Meet #5f6368 */
     --video-bg: #ffffff;    /* Meet #000000 */
 
-    /* Chat panel (Meet's white panel, inverted to black) */
-    --chat-bg: #000000;     /* Meet #ffffff */
-    --chat-text: #dfdedb;   /* Meet #202124 */
-    --chat-field: #0e0c0b;  /* Meet #f1f3f4 */
-    --chat-muted: #a09c97;  /* Meet #5f6368 */
-    --chat-link: #e58c17;   /* Meet #1a73e8 */
-    --chat-disabled: #423e39; /* Meet #bdc1c6 */
+    /* Chat panel in the page's own palette, so it follows the theme */
+    --chat-bg: #f1f0ee;
+    --chat-text: #171512;
+    --chat-field: #dfdedb;
+    --chat-muted: #655f59;
+    --chat-link: #754b07;
+    --chat-disabled: #a09c97;
 
     --toast-bg: #cdcdcd;    /* Meet #323232 */
     --toast-text: #000000;  /* Meet #ffffff */
@@ -52,12 +52,12 @@
     --btn-hover: #4a4e51;
     --border: #5f6368;
     --video-bg: #000000;
-    --chat-bg: #ffffff;
-    --chat-text: #202124;
-    --chat-field: #f1f3f4;
-    --chat-muted: #5f6368;
-    --chat-link: #1a73e8;
-    --chat-disabled: #bdc1c6;
+    --chat-bg: #2d2e31;
+    --chat-text: #e8eaed;
+    --chat-field: #3c4043;
+    --chat-muted: #a8aeb4;  /* a bit lighter than #9aa0a6 so the placeholder passes 4.5:1 */
+    --chat-link: #8ab4f8;
+    --chat-disabled: #5f6368;
     --toast-bg: #323232;
     --toast-text: #ffffff;
     --label-shadow: rgba(0, 0, 0, .6);
@@ -77,12 +77,12 @@
         --btn-hover: #4a4e51;
         --border: #5f6368;
         --video-bg: #000000;
-        --chat-bg: #ffffff;
-        --chat-text: #202124;
-        --chat-field: #f1f3f4;
-        --chat-muted: #5f6368;
-        --chat-link: #1a73e8;
-        --chat-disabled: #bdc1c6;
+        --chat-bg: #2d2e31;
+        --chat-text: #e8eaed;
+        --chat-field: #3c4043;
+        --chat-muted: #a8aeb4;  /* a bit lighter than #9aa0a6 so the placeholder passes 4.5:1 */
+        --chat-link: #8ab4f8;
+        --chat-disabled: #5f6368;
         --toast-bg: #323232;
         --toast-text: #ffffff;
         --label-shadow: rgba(0, 0, 0, .6);
