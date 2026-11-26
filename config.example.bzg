@@ -5,7 +5,8 @@ var githubClientSecret = "YOUR_GITHUB_CLIENT_SECRET";
 
 // 1 = Cloudflare quick tunnel (plain HTTP on tunnelPort), 0 = local HTTPS on 443 with cert/
 var useTunnel = 1;
-var tunnelPort = 8001;
+// scripts/tunnel-proxy.js listens on 8001 for cloudflared and forwards here
+var tunnelPort = 8002;
 
 // Paste the address cloudflared prints. Local HTTPS uses https://localhost instead.
 var baseUrl = "https://YOUR-TUNNEL.trycloudflare.com";

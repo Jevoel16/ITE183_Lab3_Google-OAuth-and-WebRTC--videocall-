@@ -260,7 +260,7 @@ server.onDisconnect = function (clientId) {
 };
 
 if (useTunnel == 1) {
-    print("Listening on http://localhost:" + port + " for cloudflared");
+    print("Listening on http://localhost:" + port + " behind tunnel-proxy on 8001");
     print("Open " + baseUrl);
     server.run();
 } else if (server.enableTLS(certificatePath, privateKeyPath) == -1) {

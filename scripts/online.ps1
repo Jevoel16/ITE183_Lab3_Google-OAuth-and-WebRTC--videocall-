@@ -1,4 +1,4 @@
-# npm run online: opens a Cloudflare quick tunnel, points config.bzg at it and starts the app.
+# npm run online: starts tunnel-proxy and a Cloudflare quick tunnel, points config.bzg at it and starts the app.
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot)
 
@@ -12,9 +12,12 @@ function Set-ConfigValue($text, $name, $value) {
 }
 
 if (-not (Test-Path config.bzg)) { throw "config.bzg is missing. Copy config.example.bzg to config.bzg and fill in your keys." }
-foreach ($tool in "cloudflared", "bonezegei") {
+foreach ($tool in "cloudflared", "bonezegei", "node") {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool isn't installed or isn't on PATH." }
 }
+
+# Fixes the WebSocket header casing cloudflared sends, which http.dll rejects (see scripts/tunnel-proxy.js)
+$proxy = Start-Process node -ArgumentList "scripts/tunnel-proxy.js" -WindowStyle Hidden -PassThru
 
 $log = Join-Path $env:TEMP "jmeet-cloudflared.log"
 Remove-Item $log -ErrorAction SilentlyContinue
@@ -31,12 +34,13 @@ try {
             if ($match) { $url = $match.Matches[0].Value }
         }
         if ($tunnel.HasExited) { throw "cloudflared stopped. Its log is in $log" }
+        if ($proxy.HasExited) { throw "tunnel-proxy stopped. Is port 8001 already in use?" }
     }
     if (-not $url) { throw "No tunnel address after 30 seconds. Check your connection and try again." }
 
     $config = [IO.File]::ReadAllText("$PWD\config.bzg")
     $config = Set-ConfigValue $config "useTunnel" "1"
-    $config = Set-ConfigValue $config "tunnelPort" "8001"
+    $config = Set-ConfigValue $config "tunnelPort" "8002"
     $config = Set-ConfigValue $config "baseUrl" "`"$url`""
     $config = Set-ConfigValue $config "googleRedirectUri" "`"$url/google-callback`""
     $config = Set-ConfigValue $config "githubRedirectUri" "`"$url/github-callback`""
@@ -53,5 +57,7 @@ try {
 
     bonezegei app.bzg
 } finally {
-    if (-not $tunnel.HasExited) { Stop-Process -Id $tunnel.Id -Force }
+    foreach ($child in $tunnel, $proxy) {
+        if (-not $child.HasExited) { Stop-Process -Id $child.Id -Force }
+    }
 }
