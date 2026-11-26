@@ -31,12 +31,43 @@ test("call machine allows every listed transition", () => {
     assert.equal(callTransition(CALL.JOINING, "connected"), CALL.IN_CALL);
     assert.equal(callTransition(CALL.JOINING, "end"), CALL.IDLE);
     assert.equal(callTransition(CALL.IN_CALL, "end"), CALL.IDLE);
+    assert.equal(callTransition(CALL.IN_CALL, "lost"), CALL.RECONNECTING);
+    assert.equal(callTransition(CALL.RECONNECTING, "connected"), CALL.IN_CALL);
+    assert.equal(callTransition(CALL.RECONNECTING, "end"), CALL.IDLE);
 });
 
 test("call machine rejects invalid transitions", () => {
     assert.throws(() => core.callTransition(core.CALL.IDLE, "end"));
     assert.throws(() => core.callTransition(core.CALL.IN_CALL, "join"));
     assert.throws(() => core.callTransition(core.CALL.IDLE, "connected"));
+    assert.throws(() => core.callTransition(core.CALL.JOINING, "lost"));
+    assert.throws(() => core.callTransition(core.CALL.RECONNECTING, "lost"));
+});
+
+test("reconnectDelay backs off, then gives up", () => {
+    assert.deepEqual([0, 1, 2, 3, 4, 5].map(core.reconnectDelay), [1000, 2000, 4000, 8000, 15000, 15000]);
+    assert.equal(core.reconnectDelay(6), null);
+});
+
+test("makeRoomCode makes abc-defg-hij codes", () => {
+    assert.equal(core.makeRoomCode(() => 0), "aaa-aaaa-aaa");
+    assert.equal(core.makeRoomCode((n) => n - 1), "zzz-zzzz-zzz");
+    assert.ok(core.isRoomCode(core.makeRoomCode((n) => Math.floor(Math.random() * n))));
+});
+
+test("isRoomCode rejects other shapes", () => {
+    for (const bad of ["", "abc-defg-hi", "ABC-DEFG-HIJ", "abc-defg-hij-", "abc_defg_hij", null, 42]) {
+        assert.equal(core.isRoomCode(bad), false, String(bad));
+    }
+    assert.equal(core.isRoomCode("abc-defg-hij"), true);
+});
+
+test("normalizeRoomInput accepts pasted codes, hashes and invite links", () => {
+    assert.equal(core.normalizeRoomInput(" ABC-DEFG-HIJ "), "abc-defg-hij");
+    assert.equal(core.normalizeRoomInput("#abc-defg-hij"), "abc-defg-hij");
+    assert.equal(core.normalizeRoomInput("https://x.trycloudflare.com/#abc-defg-hij"), "abc-defg-hij");
+    assert.equal(core.normalizeRoomInput("hello"), "");
+    assert.equal(core.normalizeRoomInput(null), "");
 });
 
 test("profileToUser reads Google and GitHub profiles", () => {

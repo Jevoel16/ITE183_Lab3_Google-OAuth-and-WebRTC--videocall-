@@ -316,6 +316,22 @@ body.in-app { height: 100dvh; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.room { display: flex; align-items: center; gap: 2px; }
+#room-code {
+    width: 15ch;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+}
+#room-code:not([readonly]) { border-color: var(--border); }
+#room-code:not([readonly]):hover { background: var(--btn); }
+#room-code[aria-invalid="true"] { border-color: var(--error); }
+#room-code::placeholder { color: var(--muted); }
 .call-header-end { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .identity { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
 .identity-name { max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -621,6 +637,8 @@ body.in-app { height: 100dvh; }
     .call-header { flex-wrap: wrap; row-gap: 4px; }
     .call-header .brand b, .identity-name { display: none; }
     #status { order: 3; flex-basis: 100%; }
+    .call-header { gap: 8px; }
+    #room-code { width: 13ch; padding: 0 6px; }
     .call-body { grid-template-columns: minmax(0, 1fr); padding: 0 12px; }
     /* Chat becomes a drawer over the call */
     .chat {

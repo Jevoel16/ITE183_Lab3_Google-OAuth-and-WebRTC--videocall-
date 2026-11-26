@@ -1,5 +1,5 @@
 // Pure logic shared by the page and the node:test tests: the sign-in and
-// call state machines, profile parsing, grid sizing and signal chunking.
+// call state machines, room codes, profile parsing, grid sizing and signal chunking.
 (function (root) {
     // ==============================
     // SIGN-IN STATE MACHINE (see docs/state-machines.md)
@@ -32,18 +32,46 @@
     // ==============================
     // CALL STATE MACHINE
     // ==============================
-    const CALL = Object.freeze({ IDLE: "idle", JOINING: "joining", IN_CALL: "inCall" });
+    const CALL = Object.freeze({ IDLE: "idle", JOINING: "joining", IN_CALL: "inCall", RECONNECTING: "reconnecting" });
 
     const CALL_TRANSITIONS = Object.freeze({
         idle: { join: CALL.JOINING },
         joining: { connected: CALL.IN_CALL, end: CALL.IDLE },
-        inCall: { end: CALL.IDLE }
+        inCall: { lost: CALL.RECONNECTING, end: CALL.IDLE },
+        reconnecting: { connected: CALL.IN_CALL, end: CALL.IDLE }
     });
 
     function callTransition(state, event) {
         const next = (CALL_TRANSITIONS[state] || {})[event];
         if (!next) throw new Error(`Invalid call transition: ${state} + ${event}`);
         return next;
+    }
+
+    // 1 s, 2 s, 4 s, 8 s, 15 s, 15 s, then null: about 45 s before giving up
+    function reconnectDelay(attempt) {
+        return attempt < 6 ? Math.min(1000 * 2 ** attempt, 15000) : null;
+    }
+
+    // ==============================
+    // ROOM CODES (Meet-style abc-defg-hij, checked again by app.bzg)
+    // ==============================
+    const ROOM_RE = /^[a-z]{3}-[a-z]{4}-[a-z]{3}$/;
+    const LETTERS = "abcdefghijklmnopqrstuvwxyz";
+
+    function isRoomCode(code) {
+        return typeof code === "string" && ROOM_RE.test(code);
+    }
+
+    // randomInt(n) returns 0..n-1; passed in so tests are deterministic
+    function makeRoomCode(randomInt) {
+        const pick = (n) => Array.from({ length: n }, () => LETTERS[randomInt(LETTERS.length)]).join("");
+        return pick(3) + "-" + pick(4) + "-" + pick(3);
+    }
+
+    // Accepts what people paste: a bare code, "ABC-DEFG-HIJ" or a full invite link
+    function normalizeRoomInput(text) {
+        const match = String(text || "").trim().toLowerCase().match(/[a-z]{3}-[a-z]{4}-[a-z]{3}/);
+        return match ? match[0] : "";
     }
 
     // ==============================
@@ -126,7 +154,8 @@
 
     const api = {
         AUTH, authTransition,
-        CALL, callTransition,
+        CALL, callTransition, reconnectDelay,
+        isRoomCode, makeRoomCode, normalizeRoomInput,
         isAllowedPicture, profileToUser, initialOf,
         gridColumns,
         splitSignal, collectChunk,

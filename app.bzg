@@ -10,6 +10,9 @@ var server = http(port, 16, 8, 0, 16);
 var maxParticipants = 8;
 var participantSessions = [null, null, null, null, null, null, null, null];
 var participantInfo = [null, null, null, null, null, null, null, null];
+// Room code per client; null until it sends {kind: "join", room}
+var participantRooms = [null, null, null, null, null, null, null, null];
+var roomLetters = "abcdefghijklmnopqrstuvwxyz";
 
 function isSuccess(response) {
     if (response == null) {
@@ -55,15 +58,49 @@ function finishLogin(tokenUrl, clientId, clientSecret, redirectUri, profileUrl) 
     server.redirect("/");
 }
 
+function isLetter(ch) {
+    for (var j = 0; j < 26; j = j + 1) {
+        if (substr(roomLetters, j, 1) == ch) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// BSL's regex has no character classes, so abc-defg-hij is checked by hand
+function isRoomCode(room) {
+    if (room.type != "string" || room.size != 12) {
+        return false;
+    }
+    for (var i = 0; i < 12; i = i + 1) {
+        var ch = substr(room, i, 1);
+        if (i == 3 || i == 8) {
+            if (ch != "-") {
+                return false;
+            }
+        } else if (!isLetter(ch)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function sendToRoom(room, message, skipId) {
+    for (var i = 0; i < maxParticipants; i = i + 1) {
+        if (i != skipId && participantRooms[i] == room) {
+            server.send(i, message);
+        }
+    }
+}
+
 function removePeer(clientId) {
     if (participantSessions[clientId] != null) {
+        var room = participantRooms[clientId];
         participantSessions[clientId] = null;
         participantInfo[clientId] = null;
-        var departure = stringifyJSON({kind: "left", id: clientId});
-        for (var i = 0; i < maxParticipants; i = i + 1) {
-            if (participantSessions[i] != null) {
-                server.send(i, departure);
-            }
+        participantRooms[clientId] = null;
+        if (room != null) {
+            sendToRoom(room, stringifyJSON({kind: "left", id: clientId}), clientId);
         }
     }
 }
@@ -165,13 +202,7 @@ server.onConnect = function (clientId, path) {
         }
         participantSessions[clientId] = server.getCookie("bsl_session");
         participantInfo[clientId] = {name: name, picture: picture};
-        server.send(clientId, stringifyJSON({kind: "self", id: clientId, user: participantInfo[clientId]}));
-        for (var i = 0; i < maxParticipants; i = i + 1) {
-            if (i != clientId && participantSessions[i] != null) {
-                server.send(clientId, stringifyJSON({kind: "existing", id: i, user: participantInfo[i]}));
-                server.send(i, stringifyJSON({kind: "joined", id: clientId, user: participantInfo[clientId]}));
-            }
-        }
+        participantRooms[clientId] = null;
     }
      gc();
 };
@@ -183,35 +214,40 @@ server.onData = function (message, clientId) {
             return;
         }
         var kind = profileField(incoming, "kind");
-        if (kind == "signal") {
+        var room = participantRooms[clientId];
+        if (kind == "join") {
+            var requested = profileField(incoming, "room");
+            if (room == null && isRoomCode(requested)) {
+                participantRooms[clientId] = requested;
+                server.send(clientId, stringifyJSON({kind: "self", id: clientId, room: requested, user: participantInfo[clientId]}));
+                for (var i = 0; i < maxParticipants; i = i + 1) {
+                    if (i != clientId && participantRooms[i] == requested) {
+                        server.send(clientId, stringifyJSON({kind: "existing", id: i, user: participantInfo[i]}));
+                        server.send(i, stringifyJSON({kind: "joined", id: clientId, user: participantInfo[clientId]}));
+                    }
+                }
+            }
+        } else if (room == null || kind == "ping") {
+            // Not in a room yet, or a heartbeat that only keeps Cloudflare from closing the socket
+        } else if (kind == "signal") {
             var target = profileField(incoming, "target");
             var data = profileField(incoming, "data");
             if (target.type == "number" && target >= 0 && target < maxParticipants &&
-                int(target) == target && target != clientId && participantSessions[target] != null &&
+                int(target) == target && target != clientId && participantRooms[target] == room &&
                 data.type == "object") {
                 server.send(target, stringifyJSON({kind: "signal", from: clientId, data: data}));
             }
         } else if (kind == "chat") {
             var text = profileField(incoming, "text");
             if (text.type == "string" && text.size > 0 && text.size <= 1000) {
-                var outgoing = stringifyJSON({kind: "chat", from: clientId, text: text});
-                for (var i = 0; i < maxParticipants; i = i + 1) {
-                    if (participantSessions[i] != null) {
-                        server.send(i, outgoing);
-                    }
-                }
+                sendToRoom(room, stringifyJSON({kind: "chat", from: clientId, text: text}), -1);
             }
         } else if (kind == "media") {
             // Mic/camera state (1 on, 0 off) so other tiles can show a muted badge
             var audio = profileField(incoming, "audio");
             var video = profileField(incoming, "video");
             if (audio.type == "number" && video.type == "number" && (audio == 0 || audio == 1) && (video == 0 || video == 1)) {
-                var update = stringifyJSON({kind: "media", from: clientId, audio: audio, video: video});
-                for (var i = 0; i < maxParticipants; i = i + 1) {
-                    if (i != clientId && participantSessions[i] != null) {
-                        server.send(i, update);
-                    }
-                }
+                sendToRoom(room, stringifyJSON({kind: "media", from: clientId, audio: audio, video: video}), clientId);
             }
         }
     }
