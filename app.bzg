@@ -12,6 +12,8 @@ var participantSessions = [null, null, null, null, null, null, null, null];
 var participantInfo = [null, null, null, null, null, null, null, null];
 // Room code per client; null until it sends {kind: "join", room}
 var participantRooms = [null, null, null, null, null, null, null, null];
+// Random key per browser tab, so a tab that rejoins replaces its old slot
+var participantKeys = [null, null, null, null, null, null, null, null];
 var roomLetters = "abcdefghijklmnopqrstuvwxyz";
 
 function isSuccess(response) {
@@ -99,6 +101,7 @@ function removePeer(clientId) {
         participantSessions[clientId] = null;
         participantInfo[clientId] = null;
         participantRooms[clientId] = null;
+        participantKeys[clientId] = null;
         if (room != null) {
             sendToRoom(room, stringifyJSON({kind: "left", id: clientId}), clientId);
         }
@@ -203,6 +206,7 @@ server.onConnect = function (clientId, path) {
         participantSessions[clientId] = server.getCookie("bsl_session");
         participantInfo[clientId] = {name: name, picture: picture};
         participantRooms[clientId] = null;
+        participantKeys[clientId] = null;
     }
      gc();
 };
@@ -217,7 +221,17 @@ server.onData = function (message, clientId) {
         var room = participantRooms[clientId];
         if (kind == "join") {
             var requested = profileField(incoming, "room");
-            if (room == null && isRoomCode(requested)) {
+            var key = profileField(incoming, "key");
+            if (room == null && isRoomCode(requested) && key.type == "string" && key.size >= 8 && key.size <= 64) {
+                // Behind the tunnel a dropped socket can stay half-open, so the old slot
+                // never disconnects and the user shows up twice. Drop it here instead.
+                for (var k = 0; k < maxParticipants; k = k + 1) {
+                    if (k != clientId && participantKeys[k] == key) {
+                        removePeer(k);
+                        server.close(k);
+                    }
+                }
+                participantKeys[clientId] = key;
                 participantRooms[clientId] = requested;
                 server.send(clientId, stringifyJSON({kind: "self", id: clientId, room: requested, user: participantInfo[clientId]}));
                 for (var i = 0; i < maxParticipants; i = i + 1) {

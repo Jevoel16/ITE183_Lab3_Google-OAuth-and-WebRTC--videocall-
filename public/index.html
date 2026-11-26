@@ -164,6 +164,17 @@
         // Cloudflare closes a WebSocket after about 100 s with no traffic
         const HEARTBEAT_MS = 25000;
         const ROOM_KEY = "jmeet.room";
+        // Per tab (sessionStorage), and kept across the sign-in redirect, so the
+        // server can swap out this tab's old slot when it rejoins
+        const TAB_KEY = (() => {
+            try {
+                const saved = sessionStorage.getItem("jmeet.tab");
+                if (saved) return saved;
+                const fresh = crypto.randomUUID();
+                sessionStorage.setItem("jmeet.tab", fresh);
+                return fresh;
+            } catch (e) { return crypto.randomUUID(); }
+        })();
         const roomInput = $("room-code");
 
         let auth = { status: Core.AUTH.CHECKING };   // see docs/state-machines.md
@@ -604,7 +615,7 @@
         function connect(myGeneration) {
             socket = new WebSocket(`${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/signal`);
             socket.onopen = () => {
-                send({ kind: "join", room });
+                send({ kind: "join", room, key: TAB_KEY });
                 heartbeat = setInterval(() => {
                     if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ kind: "ping" }));
                 }, HEARTBEAT_MS);
