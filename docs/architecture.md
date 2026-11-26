@@ -28,17 +28,23 @@ The client secret and access token never reach the browser. `profileToUser()` in
 
 ## Messages on /signal
 
-Everyone connected to `/signal` is in the one call (up to 8). All messages are JSON.
+Each call is a room with a Meet-style code (`abc-defg-hij`) kept in the URL hash, so an invite link is just the page address. A socket joins nothing until it sends `join`; after that, signals, chat, mic/camera state and departures only go to the same room. The server holds 8 sockets in total, across all rooms. All messages are JSON.
 
 | From | Message | Meaning |
 |---|---|---|
-| Server | `{kind: "self", id, user}` | Your participant id and profile |
-| Server | `{kind: "existing", id, user}` | Someone already in the call. The newcomer sends them an offer |
-| Server | `{kind: "joined", id, user}` | Someone new. Wait for their offer |
+| Client | `{kind: "join", room}` | First message on a new socket. `app.bzg` checks the code (`isRoomCode()`) and ignores a second join |
+| Client | `{kind: "ping"}` | Heartbeat every 25 s. The server ignores it; it only keeps Cloudflare from closing an idle socket (about 100 s) |
+| Server | `{kind: "self", id, room, user}` | Your participant id, room and profile |
+| Server | `{kind: "existing", id, user}` | Someone already in the room. The newcomer sends them an offer |
+| Server | `{kind: "joined", id, user}` | Someone new in the room. Wait for their offer |
 | Server | `{kind: "left", id}` | Remove their tile |
-| Client | `{kind: "signal", target, data}` | Offer, answer or ICE candidate for one participant. Arrives as `{kind: "signal", from, data}` |
-| Client | `{kind: "chat", text}` | Up to 1000 bytes. Sent to everyone, sender included, as `{kind: "chat", from, text}` |
-| Client | `{kind: "media", audio, video}` | Mic and camera state as `1`/`0`, sent to everyone else with `from` |
+| Client | `{kind: "signal", target, data}` | Offer, answer or ICE candidate for one participant in the same room. Arrives as `{kind: "signal", from, data}` |
+| Client | `{kind: "chat", text}` | Up to 1000 bytes. Sent to the room, sender included, as `{kind: "chat", from, text}` |
+| Client | `{kind: "media", audio, video}` | Mic and camera state as `1`/`0`, sent to the rest of the room with `from` |
+
+When the socket drops mid-call, the page keeps the camera and the chat, removes the peers, and opens a new socket after 1, 2, 4, 8, 15 and 15 s (`reconnectDelay()`). The new socket sends `join` for the same room and the others re-connect to it as a newcomer. After the sixth failed try it gives up and shows "Lost the connection to the call server".
+
+Signing in leaves the page, and the provider sends you back to `/` without the hash, so the room code is also kept in `sessionStorage` for that tab.
 
 A `signal` whose JSON is longer than 3000 characters is split into `{type: "chunk", cid, i, n, part}` pieces by `splitSignal()` and rebuilt by `collectChunk()`, both in `jmeet-core.js`.
 

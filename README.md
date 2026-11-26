@@ -6,7 +6,7 @@
 
 # Jmeet
 
-Group video calls with chat for up to 8 people, signed in with Google or GitHub, on a Bonezegei HTTPS server.
+Group video calls with chat in Meet-style rooms (up to 8 people), signed in with Google or GitHub, on a Bonezegei server.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/ci.yml?branch=main&label=CI&style=flat)](https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/badge/version-1.2.1-blue?style=flat)
@@ -27,7 +27,7 @@ ITE183 Laboratory 3. Jmeet starts from the class starter repo [msuiit-ph/BSL_OAu
 
 By default the app runs behind a Cloudflare quick tunnel: `app.bzg` listens on plain HTTP at `localhost:8001` and Cloudflare gives everyone an HTTPS `trycloudflare.com` address, so teammates can join from anywhere and both Google and GitHub sign-in work. Local HTTPS on port 443 with a self-signed certificate is still there as a fallback (`useTunnel = 0`).
 
-On top of the starter we redesigned the whole client in the Jmeet look (Google Meet's palette, inverted for the Light theme), added an active-speaker ring, muted badges, screen sharing and a chat drawer.
+On top of the starter we redesigned the whole client in the Jmeet look (Google Meet's palette, inverted for the Light theme), added an active-speaker ring, muted badges, screen sharing, a chat drawer, Meet-style rooms with invite links, and a heartbeat with automatic reconnect.
 
 ## Group Members
 
@@ -66,7 +66,9 @@ Everything is in [public/index.html](public/index.html), [public/style.css](publ
 
 **Login view.** A split layout: the sign-in card on the left, and on the right a still of the call grid built from the same tile styles the call uses. While `/api/me` is pending, `#session-status` shows the logo and "Checking your session...". If the check fails, `#error` turns into a banner with a Try again button.
 
-**Call view.** The header holds the logo, the call status (`3 in the call`), the signed-in user's avatar and name, the theme picker and Log out. The grid sizes itself from the number of tiles:
+**Rooms.** The header shows the room code (`abc-defg-hij`), which is also the URL hash, and a button that copies the invite link. Opening the site without a code makes a new room. Before joining you can type a code or paste a link; in the call the code is locked.
+
+**Call view.** The header holds the logo, the room code, the call status (`3 in the call`), the signed-in user's avatar and name, the theme picker and Log out. The grid sizes itself from the number of tiles:
 
 ```js
 // 1 tile, 2x2 up to 4, then 3 wide (8 people = 3+3+2)
@@ -94,7 +96,7 @@ Sign-in and the call each run on one state machine in `jmeet-core.js`, listed in
 
 ## Backend Changes
 
-`app.bzg` is the starter's file with three additions:
+`app.bzg` is the starter's file with four additions:
 
 1. It serves `/style.css`, `/jmeet-core.js`, and `public/404.html` for unknown paths.
 2. A `media` message relays mic and camera state to everyone else. BSL's `parseJSON` turns `true` into a number, so the state travels as `1` or `0`:
@@ -108,7 +110,28 @@ Sign-in and the call each run on one state machine in `jmeet-core.js`, listed in
         // sent to every other participant
 ```
 
-3. None on the server for big offers: the browser splits any signal over 3000 characters into numbered `chunk` parts and joins them back, because the native `http.dll` has failed on large WebSocket frames before.
+3. Rooms. A socket has to send `{kind: "join", room}` first, and every relay loop goes through `sendToRoom()`. BSL's `regex` has no character classes, so the code is checked by hand:
+
+```js
+function isRoomCode(room) {
+    if (room.type != "string" || room.size != 12) {
+        return false;
+    }
+    for (var i = 0; i < 12; i = i + 1) {
+        var ch = substr(room, i, 1);
+        if (i == 3 || i == 8) {
+            if (ch != "-") {
+                return false;
+            }
+        } else if (!isLetter(ch)) {
+            return false;
+        }
+    }
+    return true;
+}
+```
+
+4. None on the server for big offers: the browser splits any signal over 3000 characters into numbered `chunk` parts and joins them back, because the native `http.dll` has failed on large WebSocket frames before.
 
 ## Terminal Output
 
