@@ -2,8 +2,16 @@ var googleClientId = "YOUR_GOOGLE_CLIENT_ID";
 var googleClientSecret = "YOUR_GOOGLE_CLIENT_SECRET";
 var githubClientId = "YOUR_GITHUB_CLIENT_ID";
 var githubClientSecret = "YOUR_GITHUB_CLIENT_SECRET";
-var baseUrl = "https://localhost";
-var googleRedirectUri = "https://localhost/google-callback";
-var githubRedirectUri = "https://localhost/github-callback";
+
+// 1 = Cloudflare quick tunnel (plain HTTP on tunnelPort), 0 = local HTTPS on 443 with cert/
+var useTunnel = 1;
+var tunnelPort = 8001;
+
+// Paste the address cloudflared prints. Local HTTPS uses https://localhost instead.
+var baseUrl = "https://YOUR-TUNNEL.trycloudflare.com";
+var googleRedirectUri = "https://YOUR-TUNNEL.trycloudflare.com/google-callback";
+var githubRedirectUri = "https://YOUR-TUNNEL.trycloudflare.com/github-callback";
+
+// Only read when useTunnel = 0
 var certificatePath = "cert/cert.pem";
 var privateKeyPath = "cert/key.pem";

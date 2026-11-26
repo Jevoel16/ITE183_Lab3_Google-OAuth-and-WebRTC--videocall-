@@ -1,7 +1,12 @@
 include("lib/http.bzg");
 include("config.bzg");
 
-var server = http(443, 16, 8, 0, 16);
+// Cloudflare serves HTTPS in tunnel mode, so the app listens on plain HTTP
+var port = 443;
+if (useTunnel == 1) {
+    port = tunnelPort;
+}
+var server = http(port, 16, 8, 0, 16);
 var maxParticipants = 8;
 var participantSessions = [null, null, null, null, null, null, null, null];
 var participantInfo = [null, null, null, null, null, null, null, null];
@@ -218,7 +223,11 @@ server.onDisconnect = function (clientId) {
     gc();
 };
 
-if (server.enableTLS(certificatePath, privateKeyPath) == -1) {
+if (useTunnel == 1) {
+    print("Listening on http://localhost:" + port + " for cloudflared");
+    print("Open " + baseUrl);
+    server.run();
+} else if (server.enableTLS(certificatePath, privateKeyPath) == -1) {
     print("TLS setup failed; the video call server was not started.");
 } else {
     print("Open " + baseUrl);
