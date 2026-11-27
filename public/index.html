@@ -167,6 +167,8 @@
             send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>',
             link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.9 12a3.1 3.1 0 0 1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10z"/></svg>',
             close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+            fullscreen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>',
+            exitFullscreen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>',
             micOffSmall: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5a3 3 0 0 0-6 0v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52a5 5 0 0 1-5-5H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>'
         };
         const THEME_ICONS = {
@@ -227,6 +229,7 @@
         const enabled = { video: true, audio: true };
         let stream = null;        // camera + mic
         let screenTrack = null;   // while presenting
+        let localScreenTile = null; // { tile, video } preview of our own screen while presenting
         let socket = null;
         let selfId = null;
         let selfUser = null;
@@ -313,6 +316,66 @@
             return { tile, video };
         }
 
+        // Builds a "<name> is presenting" tile right after the presenter's camera tile
+        function createScreenTile(user, afterTile) {
+            const tile = document.createElement("figure");
+            tile.className = "tile screen";
+            const video = document.createElement("video");
+            video.autoplay = true;
+            video.playsInline = true;
+            video.muted = true; // screen capture carries no audio
+            const label = document.createElement("figcaption");
+            label.className = "label";
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = `${user.name} is presenting`;
+            label.append(name);
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "fullscreen-btn";
+            button.addEventListener("click", () => toggleFullscreen(tile, video));
+            tile.addEventListener("dblclick", event => {
+                // A fast double click on the button is already two button clicks
+                if (event.target.closest(".fullscreen-btn")) return;
+                toggleFullscreen(tile, video);
+            });
+            tile.append(video, label, button);
+            renderFullscreenButton(tile);
+            afterTile.after(tile);
+            layoutGrid();
+            return { tile, video };
+        }
+
+        // Removes a screen tile, leaving fullscreen first so no black fullscreen view remains
+        function removeScreenTile(tile) {
+            if (document.fullscreenElement === tile) document.exitFullscreen().catch(() => {});
+            tile.remove();
+            layoutGrid();
+        }
+
+        // Enters or leaves fullscreen on a screen tile; iOS Safari only has the video-element fallback
+        function toggleFullscreen(tile, video) {
+            if (document.fullscreenElement === tile) {
+                document.exitFullscreen().catch(() => {});
+                return;
+            }
+            if (tile.requestFullscreen) {
+                tile.requestFullscreen().catch(error => console.error("Could not enter full screen:", error));
+                return;
+            }
+            video.webkitEnterFullscreen?.();
+        }
+
+        // Shows the enter or exit icon and label on a screen tile's fullscreen button
+        function renderFullscreenButton(tile) {
+            const button = tile.querySelector(".fullscreen-btn");
+            const full = document.fullscreenElement === tile;
+            const text = full ? "Exit full screen" : "Full screen";
+            button.innerHTML = full ? ICONS.exitFullscreen : ICONS.fullscreen;
+            button.setAttribute("aria-label", text);
+            button.title = text;
+        }
+
         function setLocalTile(user) {
             localTile.querySelector(".avatar span").textContent = Core.initialOf(user.name);
             const img = localTile.querySelector(".avatar img");
@@ -382,17 +445,16 @@
             const inCall = call !== Core.CALL.IDLE;
             leave.hidden = !inCall;
             shareToggle.hidden = call !== Core.CALL.IN_CALL || !navigator.mediaDevices?.getDisplayMedia;
-            setTileMedia(localTile, enabled.audio && hasTrack("audio"), !!screenTrack || (enabled.video && hasTrack("video")));
-            localTile.classList.toggle("screen", !!screenTrack);
+            // The camera tile shows the camera only; a screen share has its own tile
+            setTileMedia(localTile, enabled.audio && hasTrack("audio"), enabled.video && hasTrack("video"));
         }
 
         function hasTrack(kind) {
             return !!(stream && stream.getTracks().some(track => track.kind === kind));
         }
 
-        // The track we send for a kind: the screen replaces the camera while presenting
+        // The camera or mic track we send on the camera connection; the screen goes on its own connection
         function outgoingTrack(kind) {
-            if (kind === "video" && screenTrack) return screenTrack;
             return stream ? stream.getTracks().find(item => item.kind === kind) || null : null;
         }
 
@@ -401,7 +463,7 @@
             try {
                 send({ kind: "media",
                        audio: enabled.audio && hasTrack("audio") ? 1 : 0,
-                       video: screenTrack || (enabled.video && hasTrack("video")) ? 1 : 0 });
+                       video: enabled.video && hasTrack("video") ? 1 : 0 });
             } catch (error) {
                 console.error("Could not send media state:", error);
             }
@@ -731,8 +793,7 @@
             for (const id of [...participants.keys()]) removeParticipant(id, false);
             chunks.clear();
             selfId = null;
-            if (screenTrack) screenTrack.stop();
-            screenTrack = null;
+            endScreenCapture();
             if (stream && preview === Core.PREVIEW.OFF) {
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
@@ -919,7 +980,7 @@
                         for (const participant of participants.values()) {
                             if (!participant.peer) continue;
                             const transceiver = participant.peer.getTransceivers().find(item => item.receiver.track.kind === kind);
-                            if (transceiver && !(kind === "video" && screenTrack)) await transceiver.sender.replaceTrack(track);
+                            if (transceiver) await transceiver.sender.replaceTrack(track);
                         }
                         if (kind === "audio") meter(localTile, stream);
                         if (myGeneration !== generation) return;
@@ -949,14 +1010,9 @@
             }
         }
 
-        async function replaceOutgoingVideo(track) {
-            for (const participant of participants.values()) {
-                const transceiver = participant.peer?.getTransceivers().find(item => item.receiver.track.kind === "video");
-                if (transceiver) await transceiver.sender.replaceTrack(track);
-            }
-        }
-
+        // Starts presenting: the screen gets its own tile next to the camera tile
         async function toggleShare() {
+            // A second press stops presenting
             if (screenTrack) return stopShare();
             let display;
             try {
@@ -964,25 +1020,34 @@
             } catch (error) {
                 return; // picker cancelled
             }
+            // The call ended while the picker was open
             if (call !== Core.CALL.IN_CALL) return display.getTracks().forEach(track => track.stop());
             screenTrack = display.getVideoTracks()[0];
-            screenTrack.onended = stopShare;
-            localVideo.srcObject = new MediaStream([screenTrack]);
-            await replaceOutgoingVideo(screenTrack);
+            screenTrack.contentHint = "detail"; // favour sharp text over frame rate
+            screenTrack.onended = stopShare;    // the browser's own "Stop sharing"
+            localScreenTile = createScreenTile(selfUser, localTile);
+            localScreenTile.video.srcObject = new MediaStream([screenTrack]);
             renderControls();
-            sendMediaState();
             toast("You're presenting to everyone");
         }
 
-        async function stopShare() {
-            if (!screenTrack) return;
-            screenTrack.onended = null;
-            screenTrack.stop();
+        // Stops the capture and removes the local preview tile; safe to call when not presenting
+        function endScreenCapture() {
+            if (screenTrack) {
+                screenTrack.onended = null;
+                screenTrack.stop();
+            }
             screenTrack = null;
-            localVideo.srcObject = stream;
-            await replaceOutgoingVideo(outgoingTrack("video"));
+            // Remove the preview if there is one
+            if (localScreenTile) removeScreenTile(localScreenTile.tile);
+            localScreenTile = null;
+        }
+
+        // Stops presenting from the Present button or the browser's "Stop sharing"
+        function stopShare() {
+            if (!screenTrack) return;
+            endScreenCapture();
             renderControls();
-            sendMediaState();
         }
 
         // ==============================
@@ -1129,6 +1194,10 @@
         previewAudio.addEventListener("click", () => togglePreview("audio", previewAudio));
         audioToggle.addEventListener("click", () => toggleMedia("audio", audioToggle));
         shareToggle.addEventListener("click", toggleShare);
+        // Esc, the button or the browser can change fullscreen; keep every screen tile's button in step
+        document.addEventListener("fullscreenchange", () => {
+            videos.querySelectorAll(".tile.screen").forEach(renderFullscreenButton);
+        });
         chatToggle.addEventListener("click", () => setChatOpen(!chatOpen()));
         $("chat-close").addEventListener("click", () => setChatOpen(false));
         $("audio-unlock").addEventListener("click", () => {

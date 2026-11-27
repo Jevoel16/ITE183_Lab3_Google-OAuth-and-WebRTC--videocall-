@@ -401,6 +401,33 @@ body.in-app main { flex: 1 1 0; }
 }
 .tile.self video { transform: scaleX(-1); }
 .tile.screen video { transform: none; object-fit: contain; }
+.tile.screen:fullscreen { border-radius: 0; background: #000; }
+.tile.screen:fullscreen video { background: #000; }
+/* Top right inside a screen tile; shown on hover or keyboard focus */
+.fullscreen-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    color: var(--text);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s;
+}
+.fullscreen-btn svg { width: 22px; height: 22px; fill: currentColor; }
+.tile.screen:hover .fullscreen-btn, .fullscreen-btn:focus-visible { opacity: 1; }
+/* Touch screens have no hover, so the button stays visible */
+@media (hover: none) {
+    .fullscreen-btn { opacity: 1; }
+}
 .tile .avatar {
     position: absolute;
     inset: 0;
