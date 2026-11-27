@@ -12,6 +12,47 @@ Then, in the project folder, `bzg install` downloads the `http` package into `li
 
 Also install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) (`winget install Cloudflare.cloudflared`). Quick tunnels need no Cloudflare account.
 
+## Linux
+
+On Linux, `scripts/run.sh` replaces the PowerShell launchers. It needs bash, Bonezegei and cloudflared.
+
+**Bonezegei v1.3.4 or newer.** v1.3.3, the version some apt sources still carry, can't parse `app.bzg`: it stops with `Expected token SEMI but got LBRACE` at the `try`/`catch` in `profileField`. Install the deb from the language repository (`Bonezegei-arm64.deb` on 64-bit ARM):
+
+```bash
+curl -LO https://github.com/bonezegei/Bonezegei_Scripting_Language/raw/main/Release/Latest/Bonezegei-x86.deb
+sudo dpkg -i Bonezegei-x86.deb
+bonezegei --version   # Bonezegei Script Interpreter v1.3.4
+```
+
+Then run `bzg install` in the project folder, as on Windows.
+
+**cloudflared**, only for online mode. The release binary is static, so it also runs on distributions without glibc, such as NixOS:
+
+```bash
+curl -L -o ~/.local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+chmod +x ~/.local/bin/cloudflared
+cloudflared --version
+```
+
+**OAuth callbacks for local mode.** Local mode serves `http://localhost:8001`, so the providers must accept that address:
+
+- Create a **separate dev GitHub OAuth app** with the callback `http://localhost:8001/github-callback`. A GitHub OAuth app has one callback URL, and the main app's callback stays on the tunnel. Put the dev app's ID and secret in your own `config.bzg` only.
+- Add `http://localhost:8001/google-callback` to the Google client's redirect URIs. Google accepts plain `http` for `localhost`.
+
+**Run it:**
+
+```bash
+# local: http://localhost:8001, no tunnel
+npm run local:linux
+
+# online: Cloudflare quick tunnel, prints https://<random>.trycloudflare.com
+npm run online:linux
+```
+
+Both modes write `useTunnel = 1`, `tunnelPort = 8001`, `baseUrl` and the two redirect URIs into `config.bzg`, then print the callbacks. Online mode logs cloudflared to `${TMPDIR:-/tmp}/jmeet-cloudflared.log`, and Ctrl+C stops the app and the tunnel together. The session cookie is `Secure`, which browsers allow on `http://localhost` because they treat `localhost` as a secure context.
+
+There's no local HTTPS mode on Linux. The fallback below listens on port 443, which needs root on Linux, and `http://localhost` already counts as a secure context for camera, microphone and screen sharing.
+
 ## 2. Keys in config.bzg
 
 `config.bzg` is gitignored. Copy the template and fill it in:
