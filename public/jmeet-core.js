@@ -166,6 +166,33 @@
     }
 
     // ==============================
+    // SIGNAL CHANNELS
+    // ==============================
+    // Screen shares use their own peer connection over the same signal relay.
+    // data.channel says which connection a signal belongs to: absent means the
+    // camera connection, "screen" goes presenter -> viewer, "screen-reply"
+    // goes viewer -> presenter.
+    const CHANNEL = Object.freeze({ CAMERA: "camera", SCREEN: "screen", SCREEN_REPLY: "screen-reply" });
+
+    // Returns the channel of a signal, or null for anything that isn't a valid one
+    function signalChannel(data) {
+        // Not an object: not a signal at all
+        if (!data || typeof data !== "object") return null;
+        // Untagged signals are camera signals, exactly as before screen channels existed
+        if (data.channel === undefined) return CHANNEL.CAMERA;
+        if (data.channel === CHANNEL.SCREEN || data.channel === CHANNEL.SCREEN_REPLY) return data.channel;
+        // An unknown tag is invalid, never silently treated as camera
+        return null;
+    }
+
+    // Returns a copy of data tagged with channel; camera data stays untouched
+    function withChannel(data, channel) {
+        // Camera signals keep today's untagged shape
+        if (channel === CHANNEL.CAMERA) return data;
+        return { ...data, channel };
+    }
+
+    // ==============================
     // THEME
     // ==============================
     // Anything but "light" or "dark" means follow the device
@@ -181,6 +208,7 @@
         isAllowedPicture, profileToUser, initialOf,
         gridColumns,
         splitSignal, collectChunk,
+        CHANNEL, signalChannel, withChannel,
         parseTheme
     };
 

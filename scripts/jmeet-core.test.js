@@ -158,6 +158,41 @@ test("collectChunk keeps senders apart and ignores bad parts", () => {
     assert.deepEqual(core.collectChunk(store, 1, a1), { s: "x".repeat(50) });
 });
 
+test("signalChannel reads untagged data as camera", () => {
+    assert.equal(core.signalChannel({ type: "offer" }), "camera");
+});
+
+test("signalChannel reads screen tags", () => {
+    assert.equal(core.signalChannel({ channel: "screen" }), "screen");
+    assert.equal(core.signalChannel({ channel: "screen-reply" }), "screen-reply");
+});
+
+test("signalChannel rejects unknown tags", () => {
+    assert.equal(core.signalChannel({ channel: "x" }), null);
+    assert.equal(core.signalChannel(null), null);
+    assert.equal(core.signalChannel("str"), null);
+});
+
+test("withChannel tags screen data without mutating", () => {
+    const input = { type: "stop" };
+    assert.deepEqual(core.withChannel(input, core.CHANNEL.SCREEN), { type: "stop", channel: "screen" });
+    assert.deepEqual(input, { type: "stop" });
+});
+
+test("withChannel keeps camera data as is", () => {
+    const input = { type: "offer", description: { type: "offer", sdp: "v=0" } };
+    assert.equal(core.withChannel(input, core.CHANNEL.CAMERA), input);
+});
+
+test("chunked screen signals keep their tag", () => {
+    const big = { type: "offer", description: { type: "offer", sdp: "a".repeat(10000) } };
+    const store = new Map();
+    const parts = core.splitSignal(core.withChannel(big, core.CHANNEL.SCREEN), "c1", 3000);
+    assert.ok(parts.length > 1);
+    const results = parts.map(p => core.collectChunk(store, 2, p));
+    assert.equal(core.signalChannel(results.at(-1)), "screen");
+});
+
 test("parseTheme falls back to system", () => {
     assert.equal(core.parseTheme("light"), "light");
     assert.equal(core.parseTheme("dark"), "dark");
