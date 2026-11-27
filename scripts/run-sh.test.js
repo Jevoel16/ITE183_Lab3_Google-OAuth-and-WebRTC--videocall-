@@ -52,6 +52,27 @@ test("set_config_value writes metacharacters literally", () => {
     assert.equal(fs.readFileSync(file, "utf8"), `var baseUrl = ${value};\n`);
 });
 
+test("extract_tunnel_url finds the address", () => {
+    const log = tempConfig([
+        "2026-11-27T10:00:00Z INF Requesting new quick Tunnel on trycloudflare.com...",
+        "2026-11-27T10:00:01Z INF +--------------------------------------------------------------------------------------------+",
+        "2026-11-27T10:00:01Z INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |",
+        "2026-11-27T10:00:01Z INF |  https://ab-cd-12.trycloudflare.com                                                         |",
+        "2026-11-27T10:00:01Z INF +--------------------------------------------------------------------------------------------+",
+        "",
+    ].join("\n"));
+    const result = callFunction("extract_tunnel_url", [log]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, "https://ab-cd-12.trycloudflare.com\n");
+});
+
+test("extract_tunnel_url prints nothing without an address", () => {
+    const log = tempConfig("2026-11-27T10:00:00Z INF Requesting new quick Tunnel on trycloudflare.com...\n");
+    const result = callFunction("extract_tunnel_url", [log]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, "");
+});
+
 test("run.sh skips outside npm", () => {
     const env = { ...process.env };
     delete env.npm_lifecycle_event;

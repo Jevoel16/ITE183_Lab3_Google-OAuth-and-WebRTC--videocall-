@@ -82,12 +82,84 @@ run_local() {
     exec bonezegei app.bzg
 }
 
+# Prints the first quick tunnel address in cloudflared's log, or nothing if there is none yet
+extract_tunnel_url() {
+    local log="$1"
+    # cloudflared may not have created the log yet
+    if [[ ! -f $log ]]; then
+        return 0
+    fi
+    # grep exits 1 with no match; that just means "no address yet"
+    grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$log" | head -n 1 || true
+}
+
+# PID of the background cloudflared, killed by stop_tunnel when the script exits
+tunnel_pid=""
+
+# Kills cloudflared if it is still running
+stop_tunnel() {
+    if [[ -z $tunnel_pid ]]; then
+        return 0
+    fi
+    kill "$tunnel_pid" 2>/dev/null || true
+    wait "$tunnel_pid" 2>/dev/null || true
+    tunnel_pid=""
+}
+
+# Waits up to 30 s for cloudflared to log its address and prints it; fails if it never does
+wait_for_tunnel_url() {
+    local log="$1" url="" attempt
+    # Poll once a second, stopping early if cloudflared dies
+    for ((attempt = 0; attempt < 30; attempt++)); do
+        sleep 1
+        url="$(extract_tunnel_url "$log")"
+        if [[ -n $url ]]; then
+            echo "$url"
+            return 0
+        fi
+        if ! kill -0 "$tunnel_pid" 2>/dev/null; then
+            fail "cloudflared stopped. Its log is in $log"
+        fi
+    done
+    fail "No tunnel address after 30 seconds. Check your connection and try again."
+}
+
+# online mode: opens a Cloudflare quick tunnel to port 8001, points config.bzg at it and starts the app
+run_online() {
+    local log="${TMPDIR:-/tmp}/jmeet-cloudflared.log" url
+    check_common
+    if ! command -v cloudflared >/dev/null 2>&1; then
+        fail "cloudflared isn't installed or isn't on PATH."
+    fi
+
+    rm -f "$log"
+    # --config /dev/null skips ~/.cloudflared/config.yml, whose catch-all rule 404s quick tunnels
+    cloudflared tunnel --config /dev/null --url http://localhost:8001 2>"$log" &
+    tunnel_pid=$!
+    # Ctrl+C or kill exits through the EXIT trap, which stops cloudflared
+    trap stop_tunnel EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+
+    url="$(wait_for_tunnel_url "$log")"
+    write_config "$url"
+
+    echo ""
+    echo "  Share this address: $url"
+    echo "  Add to Google redirect URIs:  $url/google-callback"
+    echo "  Set GitHub callback URL to:   $url/github-callback"
+    echo "  It can take a minute to start working. Ctrl+C stops everything."
+    echo ""
+    # No exec: this shell must stay alive so the EXIT trap stops cloudflared
+    bonezegei app.bzg
+}
+
 # Entry point: validates the mode, applies the npm guard, then runs the mode from the repo root
 main() {
     local mode="${1:-}"
 
     # Reject anything but the known modes before doing any work
-    if [[ $mode != "local" ]]; then
+    if [[ $mode != "local" && $mode != "online" ]]; then
         echo "Usage: scripts/run.sh local|online" >&2
         exit 2
     fi
@@ -96,7 +168,11 @@ main() {
     fi
 
     cd "$(dirname "${BASH_SOURCE[0]}")/.."
-    run_local
+    # Dispatch to the chosen mode
+    if [[ $mode == "local" ]]; then
+        run_local
+    fi
+    run_online
 }
 
 # Run main only when executed, not when sourced
