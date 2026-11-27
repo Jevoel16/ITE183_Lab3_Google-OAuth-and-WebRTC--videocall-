@@ -239,7 +239,7 @@
         let heartbeat = null;
         let reconnectTimer = null;
         let reconnectAttempt = 0;
-        const participants = new Map();  // id -> { id, user, tile, video, peer, candidates, incoming }
+        const participants = new Map();  // id -> { id, user, tile, video, peer, candidates, incoming, screenOut, screenIn }
         const chunks = new Map();
 
         // ==============================
@@ -534,6 +534,9 @@
             const participant = participants.get(id);
             if (!participant) return;
             participants.delete(id);
+            // Screen connections both ways go with them, before their camera tile
+            closeScreenOut(participant, false);
+            closeScreenIn(participant);
             const current = participant.peer;
             participant.peer = null;
             if (current) current.close();
@@ -548,7 +551,8 @@
             if (participants.has(id)) return participants.get(id);
             const user = Core.profileToUser(profile);
             const { tile, video } = createTile(user);
-            const participant = { id, user, tile, video, peer: null, candidates: [], incoming: new MediaStream() };
+            const participant = { id, user, tile, video, peer: null, candidates: [], incoming: new MediaStream(),
+                                  screenOut: null, screenIn: null };
             video.srcObject = participant.incoming;
             participants.set(id, participant);
             countStatus();
@@ -628,6 +632,148 @@
             }
         }
 
+        // ==============================
+        // SCREEN SHARING CONNECTIONS
+        // ==============================
+        // Each presenter opens one send-only RTCPeerConnection per viewer, next to
+        // the camera connection. The presenter always offers (tagged "screen"),
+        // the viewer answers (tagged "screen-reply"), so there is no glare.
+        function socketOpen() {
+            return !!socket && socket.readyState === WebSocket.OPEN;
+        }
+
+        // Opens the outgoing screen connection to one participant and sends the offer
+        async function openScreenOut(participant) {
+            // Nothing to send, or the participant already left
+            if (!screenTrack || !participants.has(participant.id)) return;
+            closeScreenOut(participant, false);
+            const myGeneration = generation;
+            const current = new RTCPeerConnection({ iceServers });
+            participant.screenOut = { peer: current, candidates: [] };
+            // Stale once we left, they left, or this connection was replaced or closed
+            const isCurrent = () => myGeneration === generation && participant.screenOut?.peer === current
+                && participants.has(participant.id);
+            current.addTransceiver(screenTrack, { direction: "sendonly" });
+            current.onicecandidate = event => {
+                if (!isCurrent() || !event.candidate || !socketOpen()) return;
+                sendSignal(participant.id, Core.withChannel({ type: "candidate", candidate: event.candidate }, Core.CHANNEL.SCREEN));
+            };
+            const offer = await current.createOffer();
+            if (!isCurrent()) return;
+            await current.setLocalDescription(offer);
+            if (!isCurrent()) return;
+            sendSignal(participant.id, Core.withChannel({ type: "offer", description: current.localDescription }, Core.CHANNEL.SCREEN));
+        }
+
+        // Starts a screen connection without letting its failure end the call
+        function startScreenOut(participant) {
+            openScreenOut(participant).catch(error => console.error(`Could not share the screen with ${participant.user.name}:`, error));
+        }
+
+        // Closes the outgoing screen connection; notify tells the viewer to drop the tile now
+        function closeScreenOut(participant, notify) {
+            const screenOut = participant.screenOut;
+            if (!screenOut) return;
+            participant.screenOut = null;
+            if (notify && socketOpen()) sendSignal(participant.id, Core.withChannel({ type: "stop" }, Core.CHANNEL.SCREEN));
+            screenOut.peer.close();
+        }
+
+        // Closes the incoming screen connection from a participant and removes its tile
+        function closeScreenIn(participant) {
+            const screenIn = participant.screenIn;
+            if (!screenIn) return;
+            participant.screenIn = null;
+            screenIn.peer.close();
+            // The tile only exists once the track arrived
+            if (screenIn.tile) removeScreenTile(screenIn.tile);
+        }
+
+        // Handles one screen signal; a broken screen connection never ends the call
+        async function handleScreenSignal(participant, data, channel, myGeneration) {
+            try {
+                // "screen" comes from a presenter to us as viewer; "screen-reply" from a viewer to us as presenter
+                if (channel === Core.CHANNEL.SCREEN) await handleIncomingScreen(participant, data, myGeneration);
+                else await handleScreenReply(participant, data, myGeneration);
+            } catch (error) {
+                console.error(`Screen sharing signal from ${participant.user.name} failed:`, error);
+            }
+        }
+
+        // Viewer side: offer, candidate or stop from a presenter
+        async function handleIncomingScreen(participant, data, myGeneration) {
+            if (data.type === "stop") {
+                closeScreenIn(participant);
+                return;
+            }
+            if (data.type === "candidate") {
+                const screenIn = participant.screenIn;
+                // No connection yet: nothing to attach the candidate to
+                if (!screenIn) return;
+                if (screenIn.peer.remoteDescription) await screenIn.peer.addIceCandidate(data.candidate);
+                else screenIn.candidates.push(data.candidate);
+                return;
+            }
+            if (data.type === "offer") await answerScreenOffer(participant, data, myGeneration);
+        }
+
+        // Viewer side: replaces any old incoming screen connection and answers the new offer
+        async function answerScreenOffer(participant, data, myGeneration) {
+            closeScreenIn(participant);
+            const current = new RTCPeerConnection({ iceServers });
+            const screenIn = { peer: current, candidates: [], tile: null, video: null };
+            participant.screenIn = screenIn;
+            // Stale once we left, they left, or a newer offer or stop replaced this connection
+            const isCurrent = () => myGeneration === generation && participant.screenIn === screenIn
+                && participants.has(participant.id);
+            current.onicecandidate = event => {
+                if (!isCurrent() || !event.candidate || !socketOpen()) return;
+                sendSignal(participant.id, Core.withChannel({ type: "candidate", candidate: event.candidate }, Core.CHANNEL.SCREEN_REPLY));
+            };
+            current.ontrack = event => {
+                // One tile per connection, even if the track event repeats
+                if (!isCurrent() || screenIn.tile) return;
+                const { tile, video } = createScreenTile(participant.user, participant.tile);
+                screenIn.tile = tile;
+                screenIn.video = video;
+                video.srcObject = new MediaStream([event.track]);
+                playRemote(video);
+            };
+            current.onconnectionstatechange = () => {
+                // Only failed or closed end it; disconnected may still recover
+                if (participant.screenIn !== screenIn) return;
+                if (current.connectionState === "failed" || current.connectionState === "closed") closeScreenIn(participant);
+            };
+            await current.setRemoteDescription(data.description);
+            if (!isCurrent()) return;
+            // The offer's transceiver exists now; we only receive on it
+            for (const transceiver of current.getTransceivers()) transceiver.direction = "recvonly";
+            for (const candidate of screenIn.candidates) await current.addIceCandidate(candidate);
+            screenIn.candidates = [];
+            const answer = await current.createAnswer();
+            await current.setLocalDescription(answer);
+            if (!isCurrent()) return;
+            sendSignal(participant.id, Core.withChannel({ type: "answer", description: current.localDescription }, Core.CHANNEL.SCREEN_REPLY));
+        }
+
+        // Presenter side: answer or candidate from a viewer for our outgoing screen connection
+        async function handleScreenReply(participant, data, myGeneration) {
+            const screenOut = participant.screenOut;
+            // We stopped presenting, or never offered to them
+            if (!screenOut) return;
+            const current = screenOut.peer;
+            if (data.type === "answer") {
+                await current.setRemoteDescription(data.description);
+                if (myGeneration !== generation || participant.screenOut !== screenOut) return;
+                for (const candidate of screenOut.candidates) await current.addIceCandidate(candidate);
+                screenOut.candidates = [];
+                return;
+            }
+            if (data.type !== "candidate") return;
+            if (current.remoteDescription) await current.addIceCandidate(data.candidate);
+            else screenOut.candidates.push(data.candidate);
+        }
+
         async function handleMessage(text, myGeneration) {
             if (myGeneration !== generation) return;
             const message = JSON.parse(text);
@@ -652,6 +798,8 @@
                 if (message.kind === "joined") {
                     addSystemMessage(participant.user.name + " joined");
                     sendMediaState(); // so the newcomer sees our muted badge
+                    // A newcomer joining mid-presentation gets the screen too
+                    if (screenTrack) startScreenOut(participant);
                     return;
                 }
                 const current = createPeer(participant);
@@ -680,11 +828,17 @@
             const data = message.data.type === "chunk"
                 ? Core.collectChunk(chunks, message.from, message.data)
                 : message.data;
-            // A bad offer or a late candidate only affects that one peer, so don't end the call
-            if (data) {
-                try { await handleSignal(participant, data, myGeneration); }
-                catch (error) { console.error(`Signal from ${participant.user.name} failed:`, error); }
+            if (!data) return;
+            // Route by channel: untagged signals belong to the camera connection
+            const channel = Core.signalChannel(data);
+            if (channel === null) return;
+            if (channel !== Core.CHANNEL.CAMERA) {
+                await handleScreenSignal(participant, data, channel, myGeneration);
+                return;
             }
+            // A bad offer or a late candidate only affects that one peer, so don't end the call
+            try { await handleSignal(participant, data, myGeneration); }
+            catch (error) { console.error(`Signal from ${participant.user.name} failed:`, error); }
         }
 
         // ==============================
@@ -1027,6 +1181,8 @@
             screenTrack.onended = stopShare;    // the browser's own "Stop sharing"
             localScreenTile = createScreenTile(selfUser, localTile);
             localScreenTile.video.srcObject = new MediaStream([screenTrack]);
+            // Everyone in the call gets the screen, whatever state their camera connection is in
+            for (const participant of participants.values()) startScreenOut(participant);
             renderControls();
             toast("You're presenting to everyone");
         }
@@ -1046,6 +1202,8 @@
         // Stops presenting from the Present button or the browser's "Stop sharing"
         function stopShare() {
             if (!screenTrack) return;
+            // Tell every viewer to drop the tile, then close our side
+            for (const participant of participants.values()) closeScreenOut(participant, true);
             endScreenCapture();
             renderControls();
         }
