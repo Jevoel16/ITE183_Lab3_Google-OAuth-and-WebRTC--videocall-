@@ -92,7 +92,7 @@ meters.forEach((m, tile) => {
 });
 ```
 
-**Control bar.** Round mic and camera buttons turn red when off, Present shares the screen in place of the camera, and the red Leave button goes back to home.
+**Control bar.** Round mic and camera buttons turn red when off. Present adds your screen as its own tile next to your camera; viewers can make it full screen. The red Leave button goes back to home.
 
 **Chat.** A side panel on desktop and a full-screen drawer on phones, in the same colors as the rest of the theme. The call fits the screen, so long chats scroll inside the panel. Your messages are accent bubbles on the right, others are grey bubbles on the left with their avatar. A dot on the chat button and a toast show new messages while the panel is closed.
 

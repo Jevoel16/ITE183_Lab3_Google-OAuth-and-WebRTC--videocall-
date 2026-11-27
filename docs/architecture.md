@@ -38,7 +38,7 @@ Each call is a room with a Meet-style code (`abc-defg-hij`) kept in the URL hash
 | Server | `{kind: "existing", id, user}` | Someone already in the room. The newcomer sends them an offer |
 | Server | `{kind: "joined", id, user}` | Someone new in the room. Wait for their offer |
 | Server | `{kind: "left", id}` | Remove their tile |
-| Client | `{kind: "signal", target, data}` | Offer, answer or ICE candidate for one participant in the same room. Arrives as `{kind: "signal", from, data}` |
+| Client | `{kind: "signal", target, data}` | Offer, answer or ICE candidate for one participant in the same room, or a screen-share `stop`. `data.channel` picks the connection (see [Screen sharing](#screen-sharing)). Arrives as `{kind: "signal", from, data}` |
 | Client | `{kind: "chat", text}` | Up to 1000 bytes. Sent to the room, sender included, as `{kind: "chat", from, text}` |
 | Client | `{kind: "media", audio, video}` | Mic and camera state as `1`/`0`, sent to the rest of the room with `from` |
 
@@ -49,6 +49,30 @@ Signing in leaves the page, and the provider sends you back to `/` without the h
 The session lasts an hour. The page checks it every 60 s; a 401 during a call only shows a banner (the call's socket was signed in when it opened), and the login page comes up once the call ends.
 
 A `signal` whose JSON is longer than 3000 characters is split into `{type: "chunk", cid, i, n, part}` pieces by `splitSignal()` and rebuilt by `collectChunk()`, both in `jmeet-core.js`.
+
+## Screen sharing
+
+A presenter sends the screen over a **second `RTCPeerConnection`** to each viewer, next to the camera connection, so the camera tile keeps going and the screen gets a tile of its own. The camera connection's offer and answer flow does not change, and the server does not either: screen signals ride the same `signal` relay with a tag in `data.channel`, read by `signalChannel()` in `jmeet-core.js`.
+
+| `data.channel` | Sent by | Handled by the receiver as | Payloads |
+|---|---|---|---|
+| absent | either | camera connection (unchanged) | offer, answer, candidate |
+| `"screen"` | presenter | its **incoming** screen connection from that presenter | offer, candidate, `{type: "stop"}` |
+| `"screen-reply"` | viewer | its **outgoing** screen connection to that viewer | answer, candidate |
+
+Two tags are needed because two people can present at once: A→B and B→A are separate connections, and each ICE candidate must reach the right one. Any other tag is dropped. Chunking wraps the whole `data` object, so the tag survives reassembly.
+
+Lifecycle:
+
+- **The presenter always offers** a screen connection, so there is no glare. It has one `sendonly` video transceiver carrying the screen track (`contentHint = "detail"`).
+- **Start presenting:** open a screen connection to every participant, whatever state their camera connection is in, and show a local preview tile.
+- **Viewer gets a `screen` offer:** replace any older incoming screen connection, answer as `recvonly` tagged `screen-reply`, and create the "<name> is presenting" tile right after the presenter's camera tile on `ontrack`. Candidates that arrive before the remote description are queued, as on the camera path.
+- **Newcomer while presenting:** on `joined`, the presenter also opens a screen connection to the newcomer. The server sends `existing` to the newcomer before it sends `joined` to the presenter, so the newcomer already knows the presenter when the offer arrives.
+- **Stop presenting** (Present button or the browser's "Stop sharing"): send `{channel: "screen", type: "stop"}` to every viewer, close all outgoing screen connections, stop the track and remove the preview.
+- **The viewer removes the tile** on `stop`, on the presenter's `left`, or when the connection reaches `failed` or `closed`. `disconnected` is left to recover, and there is no ICE restart, as on the camera path.
+- **Leave or cleanup** closes every screen connection in both directions. A screen tile that is full screen leaves full screen before it is removed.
+
+A failing screen signal is logged and never ends the call. Screen tiles have no speaker ring or mic badge. Each one has a fullscreen button, or double-click, that calls `requestFullscreen()` on the tile, with `video.webkitEnterFullscreen()` as the iOS fallback.
 
 ## Files
 

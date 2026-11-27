@@ -26,7 +26,14 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 7 | Turn the camera off | The other window shows the photo or initial |
 | 8 | Talk | The speaker's tile gets the accent ring |
 | 9 | Send chat messages, with the chat closed in the other window | Bubbles on both sides; a dot and a toast in the closed window |
-| 10 | Present | The other window sees your screen; stopping brings the camera back |
+| 10a | Join with the camera on, then Present | Your camera tile stays live, and a "<you> is presenting" tile with your screen appears right after it |
+| 10b | Click the fullscreen button on a screen tile, press Esc, then double-click the tile | It enters and leaves full screen; the button's label flips between "Full screen" and "Exit full screen" |
+| 10c | Enter full screen on your screen tile, then use the browser's "Stop sharing" | Full screen exits, the screen tile is gone, the camera tile is unchanged |
+| 10d | A presents; A turns the camera off and on | B sees A's camera tile switch to the avatar and back while A's screen tile keeps playing |
+| 10e | A presents, then C joins | C sees A's screen tile |
+| 10f | A stops with the Present button | The screen tile is gone in B and C |
+| 10g | A presents and closes the tab | A's screen tile and camera tile are gone in B and C |
+| 10h | A and B both present; then A clicks Leave and joins again | Two screen tiles while both present; after rejoining, A has no stale preview and receives B's screen again |
 | 11 | Leave call | Your tile goes from the other window; you're back on home |
 | 12 | Open `https://localhost/does-not-exist` | Custom 404 page |
 | 13 | Narrow the window to 375px | Chat becomes a full-screen drawer; no sideways scroll |
