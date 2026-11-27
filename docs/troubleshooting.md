@@ -15,6 +15,11 @@
 | `npm run online` says "No tunnel address after 30 seconds" | Cloudflare didn't answer. Check the connection and run it again. cloudflared's log is in `%TEMP%\jmeet-cloudflared.log` |
 | `Skipping: start this with npm run online.` | The script was started directly or by `bzg run`. Use `npm run online` or `npm run local` |
 | `cloudflared` is not recognized | Install it (`winget install Cloudflare.cloudflared`) and open a new terminal |
+| Linux: `Run bzg install first.` | `lib/http.bzg` is missing. Run `bzg install` in the project folder |
+| Linux: `Error at Line 76: Expected token SEMI but got LBRACE` | Bonezegei is older than v1.3.4 and has no `try`/`catch`. Install the v1.3.4 deb (see [setup.md](setup.md#linux)) |
+| Linux: `cloudflared isn't installed or isn't on PATH.` | Put the `cloudflared-linux-amd64` binary in `~/.local/bin/cloudflared` and `chmod +x` it (see [setup.md](setup.md#linux)) |
+| Linux: `npm run online:linux` says "No tunnel address after 30 seconds" | Cloudflare didn't answer. Check the connection and run it again. cloudflared's log is in `${TMPDIR:-/tmp}/jmeet-cloudflared.log` |
+| Linux: `Skipping: start this with npm run local:linux.` | The script was started directly. Use `npm run local:linux` or `npm run online:linux` |
 | `openssl` fails with "subject name is expected to be in the format /type0=value0..." | Git Bash rewrote `/CN=localhost` as a path. Put `MSYS_NO_PATHCONV=1` in front of the command |
 
 ## Sign-in

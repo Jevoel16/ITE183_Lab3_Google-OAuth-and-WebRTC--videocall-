@@ -7,7 +7,9 @@
     "start": "bonezegei app.bzg",
     "test": "node scripts/check-syntax.js && node --test \"scripts/*.test.js\"",
     "online": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/online.ps1",
-    "local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1"
+    "local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1",
+    "local:linux": "bash scripts/run.sh local",
+    "online:linux": "bash scripts/run.sh online"
   },
   "dependencies": {
     "http": "^1.0.0"
