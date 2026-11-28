@@ -19,6 +19,8 @@
 | Linux: `Error at Line 76: Expected token SEMI but got LBRACE` | Bonezegei is older than v1.3.4 and has no `try`/`catch`. Install the v1.3.4 deb (see [setup.md](setup.md#linux)) |
 | Linux: `cloudflared isn't installed or isn't on PATH.` | Put the `cloudflared-linux-amd64` binary in `~/.local/bin/cloudflared` and `chmod +x` it (see [setup.md](setup.md#linux)) |
 | Linux: `npm run online:linux` says "No tunnel address after 30 seconds" | Cloudflare didn't answer. Check the connection and run it again. cloudflared's log is in `${TMPDIR:-/tmp}/jmeet-cloudflared.log` |
+| Linux: `npm run local:linux`, then "Could not start Google login." or "Could not start GitHub login." | The `http` package's `oauthStart` rejects `http://` redirect URIs. Sign in through `npm run online:linux` instead (see [setup.md](setup.md#linux)) |
+| Linux: `node isn't installed or isn't on PATH.` or `tunnel-proxy stopped. Is port 8001 already in use?` | Online mode runs `scripts/tunnel-proxy.js` with Node on port 8001. Install Node.js, or stop whatever holds 8001 (`ss -ltnp \| grep 8001`) |
 | Linux: `Skipping: start this with npm run local:linux.` | The script was started directly. Use `npm run local:linux` or `npm run online:linux` |
 | `openssl` fails with "subject name is expected to be in the format /type0=value0..." | Git Bash rewrote `/CN=localhost` as a path. Put `MSYS_NO_PATHCONV=1` in front of the command |
 

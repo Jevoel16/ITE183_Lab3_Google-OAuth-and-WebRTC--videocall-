@@ -57,11 +57,11 @@ check_common() {
     fi
 }
 
-# Points config.bzg at <base_url> with the server listening on plain HTTP port 8001
+# Points config.bzg at <base_url> with the app listening on plain HTTP <app_port>
 write_config() {
-    local base_url="$1"
+    local base_url="$1" app_port="$2"
     set_config_value config.bzg useTunnel 1
-    set_config_value config.bzg tunnelPort 8001
+    set_config_value config.bzg tunnelPort "$app_port"
     set_config_value config.bzg baseUrl "\"$base_url\""
     set_config_value config.bzg googleRedirectUri "\"$base_url/google-callback\""
     set_config_value config.bzg githubRedirectUri "\"$base_url/github-callback\""
@@ -71,7 +71,7 @@ write_config() {
 run_local() {
     local base_url="http://localhost:8001"
     check_common
-    write_config "$base_url"
+    write_config "$base_url" 8001
 
     echo ""
     echo "  Open $base_url"
@@ -93,23 +93,29 @@ extract_tunnel_url() {
     grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$log" | head -n 1 || true
 }
 
-# PID of the background cloudflared, killed by stop_tunnel when the script exits
+# PIDs of the background cloudflared and tunnel-proxy, killed by stop_helpers when the script exits
 tunnel_pid=""
+proxy_pid=""
 
-# Kills cloudflared if it is still running
-stop_tunnel() {
-    if [[ -z $tunnel_pid ]]; then
-        return 0
-    fi
-    kill "$tunnel_pid" 2>/dev/null || true
-    wait "$tunnel_pid" 2>/dev/null || true
+# Kills cloudflared and tunnel-proxy if they are still running
+stop_helpers() {
+    local pid
+    # Skip whichever was never started
+    for pid in "$tunnel_pid" "$proxy_pid"; do
+        if [[ -z $pid ]]; then
+            continue
+        fi
+        kill "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+    done
     tunnel_pid=""
+    proxy_pid=""
 }
 
 # Waits up to 30 s for cloudflared to log its address and prints it; fails if it never does
 wait_for_tunnel_url() {
     local log="$1" url="" attempt
-    # Poll once a second, stopping early if cloudflared dies
+    # Poll once a second, stopping early if cloudflared or tunnel-proxy dies
     for ((attempt = 0; attempt < 30; attempt++)); do
         sleep 1
         url="$(extract_tunnel_url "$log")"
@@ -120,29 +126,41 @@ wait_for_tunnel_url() {
         if ! kill -0 "$tunnel_pid" 2>/dev/null; then
             fail "cloudflared stopped. Its log is in $log"
         fi
+        if ! kill -0 "$proxy_pid" 2>/dev/null; then
+            fail "tunnel-proxy stopped. Is port 8001 already in use?"
+        fi
     done
     fail "No tunnel address after 30 seconds. Check your connection and try again."
 }
 
-# online mode: opens a Cloudflare quick tunnel to port 8001, points config.bzg at it and starts the app
+# online mode: opens a Cloudflare quick tunnel, points config.bzg at it and starts the app.
+# Same layout as online.ps1: cloudflared -> tunnel-proxy on 8001 -> app on 8002
 run_online() {
-    local log="${TMPDIR:-/tmp}/jmeet-cloudflared.log" url
+    local log="${TMPDIR:-/tmp}/jmeet-cloudflared.log" url tool
     check_common
-    if ! command -v cloudflared >/dev/null 2>&1; then
-        fail "cloudflared isn't installed or isn't on PATH."
-    fi
+    # cloudflared opens the tunnel, node runs tunnel-proxy
+    for tool in cloudflared node; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            fail "$tool isn't installed or isn't on PATH."
+        fi
+    done
+
+    # Ctrl+C or kill exits through the EXIT trap, which stops cloudflared and tunnel-proxy
+    trap stop_helpers EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+
+    # Fixes the WebSocket header casing cloudflared sends, which the http package rejects
+    node scripts/tunnel-proxy.js &
+    proxy_pid=$!
 
     rm -f "$log"
     # --config /dev/null skips ~/.cloudflared/config.yml, whose catch-all rule 404s quick tunnels
     cloudflared tunnel --config /dev/null --url http://localhost:8001 2>"$log" &
     tunnel_pid=$!
-    # Ctrl+C or kill exits through the EXIT trap, which stops cloudflared
-    trap stop_tunnel EXIT
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
 
     url="$(wait_for_tunnel_url "$log")"
-    write_config "$url"
+    write_config "$url" 8002
 
     echo ""
     echo "  Share this address: $url"
@@ -150,7 +168,7 @@ run_online() {
     echo "  Set GitHub callback URL to:   $url/github-callback"
     echo "  It can take a minute to start working. Ctrl+C stops everything."
     echo ""
-    # No exec: this shell must stay alive so the EXIT trap stops cloudflared
+    # No exec: this shell must stay alive so the EXIT trap stops cloudflared and tunnel-proxy
     bonezegei app.bzg
 }
 
