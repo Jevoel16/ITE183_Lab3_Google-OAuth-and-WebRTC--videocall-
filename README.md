@@ -41,7 +41,7 @@ On top of the starter we redesigned the whole client in the Jmeet look (Google M
 
 You need Windows, Bonezegei Scripting Language **v1.3.4** (Microsoft Store), [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) and a Google and a GitHub OAuth app. OpenSSL (comes with Git for Windows) is only needed for the local HTTPS fallback. Full steps, including the OAuth consoles, are in [docs/setup.md](docs/setup.md).
 
-On Linux, use `npm run local:linux` (`http://localhost:8001`) or `npm run online:linux` instead; see [Linux](docs/setup.md#linux) for the Bonezegei deb and the dev OAuth callbacks.
+On Linux, use `npm run online:linux` instead (same tunnel and proxy as `npm run online`); see [Linux](docs/setup.md#linux) for the Bonezegei deb and why `npm run local:linux` can't sign in yet.
 
 ```bash
 git clone https://github.com/Jevoel16/ITE183_Lab3_Google-OAuth-and-WebRTC--videocall-.git

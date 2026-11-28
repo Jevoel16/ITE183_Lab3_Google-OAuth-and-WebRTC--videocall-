@@ -34,22 +34,19 @@ chmod +x ~/.local/bin/cloudflared
 cloudflared --version
 ```
 
-**OAuth callbacks for local mode.** Local mode serves `http://localhost:8001`, so the providers must accept that address:
-
-- Create a **separate dev GitHub OAuth app** with the callback `http://localhost:8001/github-callback`. A GitHub OAuth app has one callback URL, and the main app's callback stays on the tunnel. Put the dev app's ID and secret in your own `config.bzg` only.
-- Add `http://localhost:8001/google-callback` to the Google client's redirect URIs. Google accepts plain `http` for `localhost`.
-
 **Run it:**
 
 ```bash
-# local: http://localhost:8001, no tunnel
-npm run local:linux
-
 # online: Cloudflare quick tunnel, prints https://<random>.trycloudflare.com
 npm run online:linux
+
+# local: http://localhost:8001, no tunnel (sign-in doesn't work yet, see below)
+npm run local:linux
 ```
 
-Both modes write `useTunnel = 1`, `tunnelPort = 8001`, `baseUrl` and the two redirect URIs into `config.bzg`, then print the callbacks. Online mode logs cloudflared to `${TMPDIR:-/tmp}/jmeet-cloudflared.log`, and Ctrl+C stops the app and the tunnel together. The session cookie is `Secure`, which browsers allow on `http://localhost` because they treat `localhost` as a secure context.
+Online mode works like `npm run online` on Windows. It starts `scripts/tunnel-proxy.js` on port 8001 and cloudflared in front of it, then writes `useTunnel = 1`, `tunnelPort = 8002`, `baseUrl` and the two redirect URIs into `config.bzg` and starts the app on 8002. It needs `node` for the proxy, logs cloudflared to `${TMPDIR:-/tmp}/jmeet-cloudflared.log`, and Ctrl+C stops the app, the tunnel and the proxy together. The Linux `http` package rejects cloudflared's `Sec-Websocket-Key` header spelling just like `http.dll` does, so the proxy is needed here too.
+
+**Local mode can't sign in yet.** It serves the app directly on `http://localhost:8001` (`tunnelPort = 8001`). The `http` package's `oauthStart` only accepts `https://` redirect URIs, so `/login/google` and `/login/github` answer "Could not start Google login." or "Could not start GitHub login.". Use online mode to sign in.
 
 There's no local HTTPS mode on Linux. The fallback below listens on port 443, which needs root on Linux, and `http://localhost` already counts as a secure context for camera, microphone and screen sharing.
 
