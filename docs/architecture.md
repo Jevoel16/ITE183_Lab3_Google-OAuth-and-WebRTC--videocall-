@@ -42,6 +42,8 @@ Each call is a room with a Meet-style code (`abc-defg-hij`) kept in the URL hash
 | Client | `{kind: "chat", text}` | Up to 1000 bytes. Sent to the room, sender included, as `{kind: "chat", from, text}` |
 | Client | `{kind: "media", audio, video}` | Mic and camera state as `1`/`0`, sent to the rest of the room with `from` |
 
+A chat message from someone else plays a short ping when the tab is in the background or the chat panel is closed (`shouldPing()` in `jmeet-core.js`). The sound is synthesized with Web Audio on the call's `AudioContext`, so there's no audio file and no server route.
+
 When the socket drops mid-call, the page keeps the camera and the chat, removes the peers, and opens a new socket after 1, 2, 4, 8, 15 and 15 s (`reconnectDelay()`). The new socket sends `join` for the same room and the others re-connect to it as a newcomer. After the sixth failed try it gives up and shows "Lost the connection to the call server".
 
 Signing in leaves the page, and the provider sends you back to `/` without the hash, so the room code is also kept in `sessionStorage` for that tab. After sign-in the page shows the home screen with that code filled in; it never joins on its own.

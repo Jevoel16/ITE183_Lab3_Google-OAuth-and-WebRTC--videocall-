@@ -21,11 +21,20 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 2 | Continue with Google with a test-user account | Home screen with your name and photo in the top bar; not in a call |
 | 3 | Log out, then Continue with GitHub | Same, with your GitHub name and avatar |
 | 4 | Stop the server and reload | Error banner with Try again; start the server and click it |
+| 4a | In a call, log out in another tab of the same browser, then wait up to 60 s | A floating "Your sign-in expired…" card appears at the top left of the video area; no red banner |
+| 4b | Click the card's ✕, then wait another 60 s | The card stays closed |
+| 4c | Leave the call | The login page shows, with no card |
+| 4d | In a call: get the expired card, click ✕, sign in again in another tab (the card stays gone), then log out there again and wait up to 60 s | The expired card appears again |
+| 4e | Open the chat panel while an expired or presenting card shows; on a phone width, open the chat drawer | The card doesn't cover the chat header or its close button; the drawer covers the card |
 | 5 | New meeting in one window, paste its invite link and Join in another account's window | Both tiles show names; video and audio connect; status says `2 in the call` |
 | 6 | Turn the mic off in one window | Red button there, mic-off badge on that tile in the other window |
 | 7 | Turn the camera off | The other window shows the photo or initial |
 | 8 | Talk | The speaker's tile gets the accent ring |
 | 9 | Send chat messages, with the chat closed in the other window | Bubbles on both sides; a dot and a toast in the closed window |
+| 9a | B switches to another tab; A sends a message | B hears the ping |
+| 9b | B's tab is in view with the chat closed; A sends a message | B hears the ping and gets the dot and the toast |
+| 9c | B's tab is in view with the chat open; A sends a message | No ping |
+| 9d | A sends a message | No ping for A |
 | 10a | Join with the camera on, then Present | Your camera tile stays live, and a "<you> is presenting" tile with your screen appears right after it |
 | 10b | Click the fullscreen button on a screen tile, press Esc, then double-click the tile | It enters and leaves full screen; the button's label flips between "Full screen" and "Exit full screen" |
 | 10c | Enter full screen on your screen tile, then use the browser's "Stop sharing" | Full screen exits, the screen tile is gone, the camera tile is unchanged |
@@ -35,6 +44,9 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 10g | A presents and closes the tab | A's screen tile and camera tile are gone in B and C |
 | 10h | A and B both present; then A clicks Leave and joins again | Two screen tiles while both present; after rejoining, A has no stale preview and receives B's screen again |
 | 10i | A presents; A's network drops for a few seconds (turn Wi-Fi off and on) | A's page says "Reconnecting...", then "Reconnected"; B and C see A's screen tile again |
+| 10j | Present the entire screen, then stop and present a window, then a tab | A floating card at the top left of the video area says "You're presenting your entire screen / a window / a tab to this call" |
+| 10k | Click the card's Hide | The card goes; presenting continues and the Present button stays blue. Presenting again shows a new card |
+| 10l | Stop with the card's Stop presenting; share again and stop with the browser's own "Stop sharing" | Both times the card and your screen tile are gone |
 | 11 | Leave call | Your tile goes from the other window; you're back on home |
 | 12 | Open `https://localhost/does-not-exist` | Custom 404 page |
 | 13 | Narrow the window to 375px | Chat becomes a full-screen drawer; no sideways scroll |
