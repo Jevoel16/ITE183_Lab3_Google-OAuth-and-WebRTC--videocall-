@@ -38,6 +38,9 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 10g | A presents and closes the tab | A's screen tile and camera tile are gone in B and C |
 | 10h | A and B both present; then A clicks Leave and joins again | Two screen tiles while both present; after rejoining, A has no stale preview and receives B's screen again |
 | 10i | A presents; A's network drops for a few seconds (turn Wi-Fi off and on) | A's page says "Reconnecting...", then "Reconnected"; B and C see A's screen tile again |
+| 10j | Present the entire screen, then stop and present a window, then a tab | A floating card at the top right says "You're presenting your entire screen / a window / a tab to this call" |
+| 10k | Click the card's Hide | The card goes; presenting continues and the Present button stays blue. Presenting again shows a new card |
+| 10l | Stop with the card's Stop presenting; share again and stop with the browser's own "Stop sharing" | Both times the card and your screen tile are gone |
 | 11 | Leave call | Your tile goes from the other window; you're back on home |
 | 12 | Open `https://localhost/does-not-exist` | Custom 404 page |
 | 13 | Narrow the window to 375px | Chat becomes a full-screen drawer; no sideways scroll |

@@ -1226,7 +1226,14 @@
             // Everyone in the call gets the screen, whatever state their camera connection is in
             for (const participant of participants.values()) startScreenOut(participant);
             renderControls();
-            toast("You're presenting to everyone");
+            // Stays while presenting; the wording follows what was picked (screen, window or tab)
+            showNotice("presenting", {
+                text: Core.presentingText(screenTrack.getSettings?.().displaySurface),
+                actions: [
+                    { label: "Stop presenting", onClick: stopShare },
+                    { label: "Hide", onClick: () => hideNotice("presenting") }
+                ]
+            });
         }
 
         // Stops the capture and removes the local preview tile; safe to call when not presenting
@@ -1239,6 +1246,8 @@
             // Remove the preview if there is one
             if (localScreenTile) removeScreenTile(localScreenTile.tile);
             localScreenTile = null;
+            // Every stop path ends here, so the presenting card never outlives the share
+            hideNotice("presenting");
         }
 
         // Stops presenting from the Present button or the browser's "Stop sharing"
