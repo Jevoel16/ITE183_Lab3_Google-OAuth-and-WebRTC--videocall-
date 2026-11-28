@@ -193,6 +193,29 @@
     }
 
     // ==============================
+    // NOTIFICATIONS
+    // ==============================
+    // A chat message from someone else pings unless you're already reading it:
+    // the tab is visible and the chat panel is open
+    function shouldPing({ mine, hidden, chatOpen }) {
+        if (mine) return false;
+        return hidden || !chatOpen;
+    }
+
+    // What the presenting notice says, from the share picker's displaySurface
+    const PRESENTING_TEXT = Object.freeze({
+        monitor: "You're presenting your entire screen to this call",
+        window: "You're presenting a window to this call",
+        browser: "You're presenting a tab to this call"
+    });
+
+    function presentingText(displaySurface) {
+        // Unknown or unreported surfaces get the plain wording
+        if (!Object.hasOwn(PRESENTING_TEXT, displaySurface ?? "")) return "You're presenting to this call";
+        return PRESENTING_TEXT[displaySurface];
+    }
+
+    // ==============================
     // THEME
     // ==============================
     // Anything but "light" or "dark" means follow the device
@@ -209,6 +232,7 @@
         gridColumns,
         splitSignal, collectChunk,
         CHANNEL, signalChannel, withChannel,
+        shouldPing, presentingText,
         parseTheme
     };
 
