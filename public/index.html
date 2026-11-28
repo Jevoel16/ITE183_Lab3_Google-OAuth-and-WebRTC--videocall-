@@ -150,6 +150,7 @@
 
     <button type="button" id="audio-unlock" class="pill-btn" hidden>Tap to hear the call</button>
     <div id="toast" role="status" aria-live="polite"></div>
+    <div id="notices" aria-live="polite"></div>
 
     <script>
         // ==============================
@@ -252,14 +253,6 @@
         }
         function showError(message) { errorBox.textContent = message; errorBox.hidden = false; }
 
-        function toast(text) {
-            const t = $("toast");
-            t.textContent = text;
-            t.classList.add("show");
-            clearTimeout(toast.timer);
-            toast.timer = setTimeout(() => t.classList.remove("show"), 2500);
-        }
-
         function formatTime(ms) {
             return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
         }
@@ -280,6 +273,52 @@
                 icon.append(image);
             }
             return icon;
+        }
+
+        // ==============================
+        // NOTIFICATIONS
+        // ==============================
+        // Short message at the bottom that fades after 2.5 s
+        function toast(text) {
+            const t = $("toast");
+            t.textContent = text;
+            t.classList.add("show");
+            clearTimeout(toast.timer);
+            toast.timer = setTimeout(() => t.classList.remove("show"), 2500);
+        }
+
+        let expiredDismissed = false; // the expired card's ✕ holds until the call ends
+
+        // Floating card at the top right; a card with the same id is replaced.
+        // actions: [{ label, onClick, ariaLabel? }]. onClick decides whether the card goes away.
+        function showNotice(id, { text, actions = [] }) {
+            hideNotice(id);
+            const card = document.createElement("div");
+            card.className = "notice";
+            card.setAttribute("role", "status");
+            card.dataset.notice = id;
+            const message = document.createElement("p");
+            message.textContent = text;
+            card.append(message);
+            // One button per action
+            for (const action of actions) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "text-btn";
+                button.textContent = action.label;
+                if (action.ariaLabel) {
+                    button.setAttribute("aria-label", action.ariaLabel);
+                    button.title = action.ariaLabel;
+                }
+                button.addEventListener("click", action.onClick);
+                card.append(button);
+            }
+            $("notices").append(card);
+        }
+
+        // Removes the floating card with this id, if it's shown
+        function hideNotice(id) {
+            $("notices").querySelector(`[data-notice="${CSS.escape(id)}"]`)?.remove();
         }
 
         // ==============================
@@ -1248,11 +1287,18 @@
                     break;
                 }
                 case Core.AUTH.EXPIRED:
-                    showError("Your sign-in expired. You can stay in this call; sign in again after you leave.");
+                    // Closed with ✕: stays closed even when the 60 s check says expired again
+                    if (expiredDismissed) break;
+                    showNotice("expired", {
+                        text: "Your sign-in expired. You can stay in this call; sign in again after you leave.",
+                        actions: [{ label: "✕", ariaLabel: "Close", onClick: () => { expiredDismissed = true; hideNotice("expired"); } }]
+                    });
                     break;
                 case Core.AUTH.SIGNED_OUT:
                     document.title = "Sign in | Jmeet";
                     errorBox.hidden = true;
+                    hideNotice("expired");
+                    expiredDismissed = false;
                     chatLog.replaceChildren();
                     break;
                 case Core.AUTH.FAILED: {
@@ -1281,7 +1327,8 @@
                     return;
                 }
                 if (!response.ok) throw new Error("Session request failed");
-                if (auth.status === Core.AUTH.EXPIRED) errorBox.hidden = true;
+                // Signed in again (e.g. in another tab): the expired card goes
+                if (auth.status === Core.AUTH.EXPIRED) hideNotice("expired");
                 setAuth({ type: "ok", user: Core.profileToUser(await response.json()) });
             } catch (error) {
                 console.error("Session check failed:", error);

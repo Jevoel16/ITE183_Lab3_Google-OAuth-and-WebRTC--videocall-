@@ -21,6 +21,9 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 2 | Continue with Google with a test-user account | Home screen with your name and photo in the top bar; not in a call |
 | 3 | Log out, then Continue with GitHub | Same, with your GitHub name and avatar |
 | 4 | Stop the server and reload | Error banner with Try again; start the server and click it |
+| 4a | In a call, log out in another tab of the same browser, then wait up to 60 s | A floating "Your sign-in expired…" card appears at the top right; no red banner |
+| 4b | Click the card's ✕, then wait another 60 s | The card stays closed |
+| 4c | Leave the call | The login page shows, with no card |
 | 5 | New meeting in one window, paste its invite link and Join in another account's window | Both tiles show names; video and audio connect; status says `2 in the call` |
 | 6 | Turn the mic off in one window | Red button there, mic-off badge on that tile in the other window |
 | 7 | Turn the camera off | The other window shows the photo or initial |
