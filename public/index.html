@@ -444,7 +444,8 @@
             shareToggle.title = screenTrack ? "Stop presenting" : "Present screen";
             const inCall = call !== Core.CALL.IDLE;
             leave.hidden = !inCall;
-            shareToggle.hidden = call !== Core.CALL.IN_CALL || !navigator.mediaDevices?.getDisplayMedia;
+            // While presenting, Stop stays reachable even during a reconnect
+            shareToggle.hidden = !screenTrack && (call !== Core.CALL.IN_CALL || !navigator.mediaDevices?.getDisplayMedia);
             // The camera tile shows the camera only; a screen share has its own tile
             setTileMedia(localTile, enabled.audio && hasTrack("audio"), enabled.video && hasTrack("video"));
         }
