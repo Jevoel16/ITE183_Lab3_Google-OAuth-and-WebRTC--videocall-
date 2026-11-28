@@ -362,6 +362,7 @@ body.in-app main { flex: 1 1 0; }
 .identity { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
 .identity-name { max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .call-body {
+    position: relative; /* anchors #notices */
     flex: 1;
     min-height: 0;
     display: grid;
@@ -639,16 +640,17 @@ body.in-app main { flex: 1 1 0; }
     z-index: 10;
 }
 #toast.show { opacity: 1; }
-/* Floating cards (sign-in expired, presenting): top right, below the top bar */
+/* Floating cards (sign-in expired, presenting): top left of the video area, inside .call-body,
+   so they never cover the call header, the chat panel or the tiles' fullscreen buttons */
 #notices {
-    position: fixed;
-    top: 80px;
-    right: 16px;
-    width: min(360px, calc(100% - 32px));
+    position: absolute;
+    top: 12px;
+    left: 28px;
+    width: min(360px, calc(100% - 56px));
     display: flex;
     flex-direction: column;
     gap: 8px;
-    z-index: 9;
+    z-index: 4; /* below the phone chat drawer (5), so an open chat covers the cards */
     pointer-events: none;
 }
 .notice {
@@ -667,9 +669,9 @@ body.in-app main { flex: 1 1 0; }
 }
 .notice p { flex: 1 1 180px; margin: 0; }
 .notice .text-btn { min-height: 36px; padding: 0 12px; }
-/* Phones: full width with side margins */
+/* Phones: the video area's full width */
 @media (max-width: 600px) {
-    #notices { top: 72px; left: 16px; right: 16px; width: auto; }
+    #notices { left: 20px; right: 20px; width: auto; }
 }
 #audio-unlock {
     position: fixed;

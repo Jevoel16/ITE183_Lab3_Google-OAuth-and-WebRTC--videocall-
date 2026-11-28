@@ -108,6 +108,8 @@
             </header>
 
             <div class="call-body">
+                <!-- Floating cards (sign-in expired, presenting) over the video area -->
+                <div id="notices" aria-live="polite"></div>
                 <div id="videos" class="grid">
                     <figure class="tile self video-off" id="local-tile">
                         <video id="local" autoplay muted playsinline></video>
@@ -150,7 +152,6 @@
 
     <button type="button" id="audio-unlock" class="pill-btn" hidden>Tap to hear the call</button>
     <div id="toast" role="status" aria-live="polite"></div>
-    <div id="notices" aria-live="polite"></div>
 
     <script>
         // ==============================
@@ -1031,6 +1032,8 @@
             setStatus(message);
             $("home-status").textContent = message;
             document.title = "Jmeet";
+            // The expired card's ✕ only holds for the call that's ending
+            expiredDismissed = false;
             if (auth.status === Core.AUTH.EXPIRED) setAuth({ type: "unauthorized" });
         }
 
@@ -1361,7 +1364,10 @@
                 }
                 if (!response.ok) throw new Error("Session request failed");
                 // Signed in again (e.g. in another tab): the expired card goes
-                if (auth.status === Core.AUTH.EXPIRED) hideNotice("expired");
+                if (auth.status === Core.AUTH.EXPIRED) {
+                    hideNotice("expired");
+                    expiredDismissed = false; // a later expiry shows the card again
+                }
                 setAuth({ type: "ok", user: Core.profileToUser(await response.json()) });
             } catch (error) {
                 console.error("Session check failed:", error);

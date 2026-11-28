@@ -61,8 +61,10 @@ two more ad-hoc elements would duplicate the show, hide and position logic.
 
 ## Design
 
-- **Notices.** One container, `#notices`, holds floating cards stacked at the top right, above the
-  video grid and below the top bar.
+- **Notices.** One container, `#notices`, holds floating cards stacked at the top left of the
+  video area, inside `.call-body`.
+  - Placement changed during review from the top right: a fixed top-right card covered the open
+    chat panel's header and close button, and the screen tiles' fullscreen buttons.
   - Each card has `role="status"`, its text, and its action buttons.
   - `showNotice` replaces any existing card with the same id; `hideNotice` removes it.
   - The cards follow the existing theme variables and work in light and dark themes.
