@@ -177,6 +177,10 @@ Open https://<random>.trycloudflare.com
 |---|
 | ![Every member in the call with chat messages](docs/images/group-call.png) |
 
+| Presenting: the screen gets its own tile next to the camera tile |
+|---|
+| ![Camera tile on the left, "Mark Leo Bagood is presenting" screen tile on the right](docs/images/screen-share.png) |
+
 ## Architecture
 
 ```mermaid
