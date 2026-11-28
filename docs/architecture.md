@@ -39,6 +39,7 @@ Everyone connected to `/signal` is in the one call (up to 8). All messages are J
 | Client | `{kind: "signal", target, data}` | Offer, answer or ICE candidate for one participant. Arrives as `{kind: "signal", from, data}` |
 | Client | `{kind: "chat", text}` | Up to 1000 bytes. Sent to everyone, sender included, as `{kind: "chat", from, text}` |
 | Client | `{kind: "media", audio, video}` | Mic and camera state as `1`/`0`, sent to everyone else with `from` |
+| Client | `{kind: "ping"}` | Keepalive every 30 s (`startKeepalive()` in `jmeet-core.js`). The server ignores it; it only stops Cloudflare from closing the idle socket after about 100 s, since media goes peer-to-peer and `/signal` is otherwise quiet during a call |
 
 A `signal` whose JSON is longer than 3000 characters is split into `{type: "chunk", cid, i, n, part}` pieces by `splitSignal()` and rebuilt by `collectChunk()`, both in `jmeet-core.js`.
 

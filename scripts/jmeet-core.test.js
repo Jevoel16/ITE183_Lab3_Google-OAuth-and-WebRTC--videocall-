@@ -98,6 +98,44 @@ test("collectChunk keeps senders apart and ignores bad parts", () => {
     assert.deepEqual(core.collectChunk(store, 1, a1), { s: "x".repeat(50) });
 });
 
+// Fake setInterval/clearInterval: tick() runs every live callback once
+function fakeTimers() {
+    const live = new Map();
+    let next = 1;
+    return {
+        delays: [],
+        setInterval(callback, delay) { this.delays.push(delay); live.set(next, callback); return next++; },
+        clearInterval(id) { live.delete(id); },
+        tick() { for (const callback of [...live.values()]) callback(); },
+        get count() { return live.size; }
+    };
+}
+
+test("startKeepalive pings on its interval until stopped", () => {
+    const timers = fakeTimers();
+    const sent = [];
+    const stop = core.startKeepalive(message => sent.push(message), timers);
+    assert.deepEqual(timers.delays, [core.KEEPALIVE_MS]);
+    assert.ok(core.KEEPALIVE_MS < 100000, "must beat Cloudflare's ~100 s idle WebSocket timeout");
+    assert.deepEqual(sent, []);
+    timers.tick();
+    timers.tick();
+    assert.deepEqual(sent, [{ kind: "ping" }, { kind: "ping" }]);
+    stop();
+    timers.tick();
+    assert.equal(sent.length, 2);
+    assert.equal(timers.count, 0);
+});
+
+test("startKeepalive survives a failing send", () => {
+    const timers = fakeTimers();
+    let calls = 0;
+    core.startKeepalive(() => { calls++; throw new Error("Signaling disconnected"); }, timers);
+    assert.doesNotThrow(() => timers.tick());
+    timers.tick();
+    assert.equal(calls, 2);
+});
+
 test("parseTheme falls back to system", () => {
     assert.equal(core.parseTheme("light"), "light");
     assert.equal(core.parseTheme("dark"), "dark");

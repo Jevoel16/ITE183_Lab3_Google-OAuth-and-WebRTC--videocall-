@@ -117,6 +117,25 @@
     }
 
     // ==============================
+    // SIGNAL KEEPALIVE
+    // ==============================
+    // Cloudflare closes a WebSocket that carries no data for about 100 s, and
+    // once a call is set up the media is peer-to-peer, so /signal goes quiet.
+    // A small message well inside that window keeps it open; app.bzg ignores
+    // kinds it doesn't know, so "ping" needs no server change.
+    const KEEPALIVE_MS = 30000;
+
+    // Calls send({kind: "ping"}) every KEEPALIVE_MS; returns a function that stops it.
+    // timers is injectable for tests and defaults to the global setInterval/clearInterval.
+    function startKeepalive(send, timers = root) {
+        const id = timers.setInterval(() => {
+            // A closed socket is handled by its own close event; a ping must never throw
+            try { send({ kind: "ping" }); } catch (error) { /* socket already closing */ }
+        }, KEEPALIVE_MS);
+        return () => timers.clearInterval(id);
+    }
+
+    // ==============================
     // THEME
     // ==============================
     // Anything but "light" or "dark" means follow the device
@@ -130,6 +149,7 @@
         isAllowedPicture, profileToUser, initialOf,
         gridColumns,
         splitSignal, collectChunk,
+        KEEPALIVE_MS, startKeepalive,
         parseTheme
     };
 

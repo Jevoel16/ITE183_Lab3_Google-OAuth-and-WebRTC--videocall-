@@ -34,6 +34,6 @@
 | Problem | Fix |
 |---|---|
 | "Couldn't use your camera or microphone" | Allow both in the browser's site settings, and close other apps using the camera |
-| "Disconnected. The call may be full or your session expired." | More than 8 people, or the one-hour session ended. Reload and sign in |
+| "Disconnected. The call may be full or your session expired." | More than 8 people, or the one-hour session ended. Reload and sign in. If it happens about two minutes into every call through the tunnel, the page is an old copy without the 30 s keepalive: reload it |
 | "Couldn't connect to …. A TURN server may be needed." | The two networks block direct connections. Try the same Wi-Fi |
 | "Tap to hear the call" button | The phone blocked audio until a tap. Tap it once |

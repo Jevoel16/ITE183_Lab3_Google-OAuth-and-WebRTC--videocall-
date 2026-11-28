@@ -162,6 +162,7 @@
         let stream = null;        // camera + mic
         let screenTrack = null;   // while presenting
         let socket = null;
+        let stopKeepalive = null; // stops the /signal ping while in a call
         let selfId = null;
         let selfUser = null;
         let messages = Promise.resolve();
@@ -554,6 +555,9 @@
                 socket.close();
             }
             socket = null;
+            // No more pings once the socket is gone
+            if (stopKeepalive) stopKeepalive();
+            stopKeepalive = null;
             for (const id of [...participants.keys()]) removeParticipant(id, false);
             chunks.clear();
             selfId = null;
@@ -604,6 +608,8 @@
                         if (myGeneration === generation) cleanup("Signaling failed. Join again.");
                     });
                 };
+                // Keep the idle socket open through Cloudflare, which drops it after ~100 s of silence
+                stopKeepalive = Core.startKeepalive(message => send(message));
                 socket.onerror = () => setStatus("Could not reach the call server.");
                 socket.onclose = () => {
                     if (myGeneration === generation) cleanup("Disconnected. The call may be full or your session expired.");
