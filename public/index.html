@@ -321,6 +321,28 @@
             $("notices").querySelector(`[data-notice="${CSS.escape(id)}"]`)?.remove();
         }
 
+        // Two-note chat ping, synthesized on the call's AudioContext (created by the Join click,
+        // so it may play in a background tab). No context, no ping.
+        function playPing() {
+            if (!audioContext || audioContext.state === "closed") return;
+            audioContext.resume().catch(() => {});
+            const start = audioContext.currentTime;
+            // 880 Hz, then 1320 Hz 90 ms later; each about 80 ms with a fast attack and decay
+            for (const [frequency, offset] of [[880, 0], [1320, 0.09]]) {
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                const at = start + offset;
+                oscillator.type = "sine";
+                oscillator.frequency.value = frequency;
+                gain.gain.setValueAtTime(0, at);
+                gain.gain.linearRampToValueAtTime(0.15, at + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, at + 0.08);
+                oscillator.connect(gain).connect(audioContext.destination);
+                oscillator.start(at);
+                oscillator.stop(at + 0.09);
+            }
+        }
+
         // ==============================
         // VIDEO TILES
         // ==============================
@@ -544,6 +566,8 @@
                 chatToggle.classList.add("unread");
                 toast(user.name + ": " + text);
             }
+            // Ping when the tab is in the background or the chat is closed (never for your own message)
+            if (Core.shouldPing({ mine, hidden: document.hidden, chatOpen: chatOpen() })) playPing();
         }
 
         function addSystemMessage(text) {

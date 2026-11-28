@@ -29,6 +29,10 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 7 | Turn the camera off | The other window shows the photo or initial |
 | 8 | Talk | The speaker's tile gets the accent ring |
 | 9 | Send chat messages, with the chat closed in the other window | Bubbles on both sides; a dot and a toast in the closed window |
+| 9a | B switches to another tab; A sends a message | B hears the ping |
+| 9b | B's tab is in view with the chat closed; A sends a message | B hears the ping and gets the dot and the toast |
+| 9c | B's tab is in view with the chat open; A sends a message | No ping |
+| 9d | A sends a message | No ping for A |
 | 10a | Join with the camera on, then Present | Your camera tile stays live, and a "<you> is presenting" tile with your screen appears right after it |
 | 10b | Click the fullscreen button on a screen tile, press Esc, then double-click the tile | It enters and leaves full screen; the button's label flips between "Full screen" and "Exit full screen" |
 | 10c | Enter full screen on your screen tile, then use the browser's "Stop sharing" | Full screen exits, the screen tile is gone, the camera tile is unchanged |
