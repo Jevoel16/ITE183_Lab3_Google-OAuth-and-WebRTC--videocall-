@@ -34,6 +34,7 @@ Run these after `bzg run`, with real keys in `config.bzg`.
 | 10f | A stops with the Present button | The screen tile is gone in B and C |
 | 10g | A presents and closes the tab | A's screen tile and camera tile are gone in B and C |
 | 10h | A and B both present; then A clicks Leave and joins again | Two screen tiles while both present; after rejoining, A has no stale preview and receives B's screen again |
+| 10i | A presents; A's network drops for a few seconds (turn Wi-Fi off and on) | A's page says "Reconnecting...", then "Reconnected"; B and C see A's screen tile again |
 | 11 | Leave call | Your tile goes from the other window; you're back on home |
 | 12 | Open `https://localhost/does-not-exist` | Custom 404 page |
 | 13 | Narrow the window to 375px | Chat becomes a full-screen drawer; no sideways scroll |

@@ -809,6 +809,8 @@
                 if (myGeneration === generation && participant.peer === current && participants.has(message.id)) {
                     sendSignal(message.id, { type: "offer", description: current.localDescription });
                 }
+                // Still presenting after a reconnect: we're the newcomer now, so offer the screen again
+                if (screenTrack && myGeneration === generation) startScreenOut(participant);
                 return;
             }
             if (message.kind === "chat") {
